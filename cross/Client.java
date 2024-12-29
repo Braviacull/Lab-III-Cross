@@ -20,7 +20,8 @@ public class Client {
         try{
             // Carica le proprietà dal file di configurazione
             Properties properties = new Properties();
-            properties.load(new FileInputStream("client.properties"));
+            FileInputStream fis = new FileInputStream("server.properties");
+            properties.load(fis);
 
             serverIP = properties.getProperty("server.ip");
             port = Integer.parseInt(properties.getProperty("server.port"));
