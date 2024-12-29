@@ -1,6 +1,6 @@
 # Variabili
 JAVAC = javac
-JAVA_FILES = cross/Server.java cross/Client.java
+JAVA_FILES = cross/Server.java cross/ServerThread.java cross/Client.java
 TARGET_DIR = cross
 
 # Regola di default
