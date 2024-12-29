@@ -1,21 +1,37 @@
 package cross;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.DataInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URL;
+import java.util.Properties;
 
 public class Server {
     private ServerSocket server;
     private DataInputStream in;
-    public static final int PORT = 3030;
-    public static final String STOP_STRING = "##";
+    private String serverIP;
+    private int port;
+    private String stopString;
 
+    public Server() {
+        try {
+            // Carica le proprietà dal file di configurazione
+            Properties properties = new Properties();
+            properties.load(new FileInputStream("server.properties"));
 
-    public Server(){
-        try{
-            server = new ServerSocket(PORT);
+            serverIP = properties.getProperty("server.ip");
+            port = Integer.parseInt(properties.getProperty("server.port"));
+            stopString = properties.getProperty("server.stop_string");
+
+            server = new ServerSocket(port, 50, InetAddress.getByName(serverIP));
+            System.out.println("Indirizzo del server: " + server.getInetAddress().getHostAddress() + ":" + server.getLocalPort());
             iniConnections();
         } catch (IOException e) {
             e.printStackTrace();
@@ -37,7 +53,7 @@ public class Server {
 
     private void readMessages() throws IOException {
         String line = "";
-        while(!line.equals(STOP_STRING)){
+        while (!line.equals(stopString)) {
             line = in.readUTF();
             System.out.println(line);
         }
