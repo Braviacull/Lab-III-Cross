@@ -1,6 +1,7 @@
 package cross;
 
 import java.io.DataOutputStream;
+import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
@@ -10,7 +11,8 @@ import java.util.Scanner;
 public class Client {
     private Socket socket;
     private DataOutputStream out;
-    private Scanner in;
+    private DataInputStream in;
+    private Scanner scanner;
     private String serverIP;
     private int port;
     private String stopString;
@@ -26,10 +28,12 @@ public class Client {
             serverIP = properties.getProperty("server.ip");
             port = Integer.parseInt(properties.getProperty("server.port"));
             stopString = properties.getProperty("server.stop_string");
+            // Proprietà caricate
 
             socket = new Socket(serverIP, port);
             out = new DataOutputStream(socket.getOutputStream());
-            in = new Scanner(System.in);
+            in = new DataInputStream(socket.getInputStream());
+            scanner = new Scanner(System.in);
             writeMessages();
         } catch (IOException e) {
             e.printStackTrace();
@@ -37,10 +41,12 @@ public class Client {
     }
 
     private void writeMessages() throws IOException {
+        System.out.println("Client started");
         String line = "";
         while(!line.equals(stopString)){
-            line = in.nextLine();
+            line = scanner.nextLine();
             out.writeUTF(line);
+            System.out.println(in.readUTF());
         }
         close();
     }
@@ -48,7 +54,7 @@ public class Client {
     private void close() throws IOException {
         socket.close();
         out.close();
-        in.close();
+        scanner.close();
     }
 
     public static void main(String[] args) {
