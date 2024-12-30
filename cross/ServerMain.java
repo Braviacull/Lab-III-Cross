@@ -26,7 +26,7 @@ public class ServerMain {
             server = new ServerSocket(port, 50, InetAddress.getByName(serverIP));
             System.out.println("Indirizzo del ServerMain: " + server.getInetAddress().getHostAddress() + ":" + server.getLocalPort());
 
-            iniConnections();
+            acceptConnections();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -47,7 +47,7 @@ public class ServerMain {
         }
     }
 
-    private void iniConnections() throws IOException {
+    private void acceptConnections() throws IOException {
         System.out.println("ServerMain started");
         try {
             while (true) {

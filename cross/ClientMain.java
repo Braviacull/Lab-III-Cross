@@ -44,7 +44,7 @@ public class ClientMain {
 
     private void writeMessages() throws IOException {
         System.out.println("Type " + stopString + " to stop");
-        System.out.println("Azioni possibili: (registration, login)");
+        System.out.println("Azioni possibili: (registration)");
         String line = "";
         while(!line.equals(stopString)){
             line = scanner.nextLine();
@@ -68,12 +68,15 @@ public class ClientMain {
 
         User user = new User(username, password);
         Gson gson = new Gson();
-        String json = gson.toJson(user);
+        String jsonUser = gson.toJson(user);
 
         try {
             // Send JSON to the ServerMain
-            out.writeUTF(json);
+            out.writeUTF(jsonUser);
             out.flush();
+            // Receive a responseStatus
+            String responseStatus = in.readUTF();
+            System.out.println(responseStatus);
         } catch (IOException e) {
             e.printStackTrace();
         }
