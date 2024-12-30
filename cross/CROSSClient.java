@@ -8,7 +8,7 @@ import java.net.Socket;
 import java.util.Properties;
 import java.util.Scanner;
 
-public class Client {
+public class CROSSClient {
     private Socket socket;
     private DataOutputStream out;
     private DataInputStream in;
@@ -18,7 +18,7 @@ public class Client {
     private String stopString;
 
 
-    public Client(){
+    public CROSSClient(){
         try{
             // Carica le proprietà dal file di configurazione
             Properties properties = new Properties();
@@ -41,7 +41,8 @@ public class Client {
     }
 
     private void writeMessages() throws IOException {
-        System.out.println("Client started");
+        System.out.println("Type " + stopString + " to stop");
+        System.out.println("Azioni possibili: (register, login)");
         String line = "";
         while(!line.equals(stopString)){
             line = scanner.nextLine();
@@ -58,6 +59,6 @@ public class Client {
     }
 
     public static void main(String[] args) {
-        new Client();
+        new CROSSClient();
     }
 }

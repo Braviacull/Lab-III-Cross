@@ -23,10 +23,13 @@ public class ServerThread implements Runnable {
             System.out.println("Server listening");
             String line = "";
             while (!line.equals(stopString)) {
-                    line = in.readUTF();
-                    System.out.println(line);
-                    out.writeUTF("Ricevuto");
+                line = in.readUTF();
+                System.out.println(line);
+                out.writeUTF("Ricevuto");
+                out.flush();
             }
+            in.close();
+            out.close();
         }
         catch (IOException e) {
             e.printStackTrace();

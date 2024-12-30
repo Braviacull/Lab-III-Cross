@@ -9,7 +9,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Server {
+public class CROSSServer {
     private ServerSocket server;
     private String serverIP;
     private int port;
@@ -17,7 +17,7 @@ public class Server {
 
     private ExecutorService connessioni;
 
-    public Server() {
+    public CROSSServer() {
         try {
             getProperties();
 
@@ -62,7 +62,7 @@ public class Server {
 
     public static void main(String[] args) {
         try {
-            new Server();
+            new CROSSServer();
         } catch (Exception e) {
             e.printStackTrace();
         }
