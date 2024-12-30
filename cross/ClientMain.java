@@ -1,5 +1,7 @@
 package cross;
 
+import com.google.gson.*;
+
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
@@ -8,7 +10,7 @@ import java.net.Socket;
 import java.util.Properties;
 import java.util.Scanner;
 
-public class CROSSClient {
+public class ClientMain {
     private Socket socket;
     private DataOutputStream out;
     private DataInputStream in;
@@ -18,7 +20,7 @@ public class CROSSClient {
     private String stopString;
 
 
-    public CROSSClient(){
+    public ClientMain(){
         try{
             // Carica le proprietà dal file di configurazione
             Properties properties = new Properties();
@@ -42,14 +44,39 @@ public class CROSSClient {
 
     private void writeMessages() throws IOException {
         System.out.println("Type " + stopString + " to stop");
-        System.out.println("Azioni possibili: (register, login)");
+        System.out.println("Azioni possibili: (registration, login)");
         String line = "";
         while(!line.equals(stopString)){
             line = scanner.nextLine();
             out.writeUTF(line);
             System.out.println(in.readUTF());
+            if (line.compareTo("registration") == 0) {
+                registration();
+            }
         }
         close();
+    }
+
+    private void registration () {
+        String username = "";
+        String password= "";
+
+        System.out.println("Enter username");
+        username = scanner.nextLine();
+        System.out.println("Enter password");
+        password = scanner.nextLine();
+
+        User user = new User(username, password);
+        Gson gson = new Gson();
+        String json = gson.toJson(user);
+
+        try {
+            // Send JSON to the ServerMain
+            out.writeUTF(json);
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void close() throws IOException {
@@ -59,6 +86,6 @@ public class CROSSClient {
     }
 
     public static void main(String[] args) {
-        new CROSSClient();
+        new ClientMain();
     }
 }

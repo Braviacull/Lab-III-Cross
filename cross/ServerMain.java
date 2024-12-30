@@ -9,7 +9,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class CROSSServer {
+public class ServerMain {
     private ServerSocket server;
     private String serverIP;
     private int port;
@@ -17,14 +17,14 @@ public class CROSSServer {
 
     private ExecutorService connessioni;
 
-    public CROSSServer() {
+    public ServerMain() {
         try {
             getProperties();
 
             connessioni = Executors.newCachedThreadPool();
 
             server = new ServerSocket(port, 50, InetAddress.getByName(serverIP));
-            System.out.println("Indirizzo del server: " + server.getInetAddress().getHostAddress() + ":" + server.getLocalPort());
+            System.out.println("Indirizzo del ServerMain: " + server.getInetAddress().getHostAddress() + ":" + server.getLocalPort());
 
             iniConnections();
         } catch (IOException e) {
@@ -48,7 +48,7 @@ public class CROSSServer {
     }
 
     private void iniConnections() throws IOException {
-        System.out.println("Server started");
+        System.out.println("ServerMain started");
         try {
             while (true) {
                 Socket clientSocket = server.accept();
@@ -62,7 +62,7 @@ public class CROSSServer {
 
     public static void main(String[] args) {
         try {
-            new CROSSServer();
+            new ServerMain();
         } catch (Exception e) {
             e.printStackTrace();
         }
