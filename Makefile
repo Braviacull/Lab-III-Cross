@@ -12,5 +12,8 @@ compile:
 
 # Regola per pulire i file compilati
 clean:
+ifeq ($(OS),Windows_NT)
+	del /Q $(TARGET_DIR)\*.class
+else
 	rm -f $(TARGET_DIR)/*.class
-
+endif
