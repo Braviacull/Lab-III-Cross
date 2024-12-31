@@ -7,25 +7,39 @@ public class ResponseStatus {
     private int response;
     private String errorMessage;
 
-    private static final Map<Integer, String> errorMessages = new HashMap<>();
+    private static final Map<Integer, String> errorMessagesRegistration = new HashMap<>();
 
     static {
-        errorMessages.put(100, "OK");
-        errorMessages.put(101, "invalid password");
-        errorMessages.put(102, "username not available");
-        errorMessages.put(103, "other error cases");
+        errorMessagesRegistration.put(100, "OK");
+        errorMessagesRegistration.put(101, "invalid password");
+        errorMessagesRegistration.put(102, "username not available");
     }
 
-    public ResponseStatus(int response) {
+    private static final Map<Integer, String> errorMessagesUpdateCredentials = new HashMap<>();
+
+    static {
+        errorMessagesUpdateCredentials.put(100, "OK");
+        errorMessagesUpdateCredentials.put(101, "invalid new password");
+        errorMessagesUpdateCredentials.put(102, "username/lod_password mismatch or non existent username");
+        errorMessagesUpdateCredentials.put(103, "new password equal to old one");
+        errorMessagesUpdateCredentials.put(104, "user currently logged in");
+    }
+
+    public ResponseStatus(int response, RegistrationRequest reg) {
         this.response = response;
-        this.errorMessage = errorMessages.getOrDefault(response, "unknown error");
+        this.errorMessage = errorMessagesRegistration.getOrDefault(response, "other error cases");
     }
 
-    public int getResponse() {
-        return response;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
+    public ResponseStatus(int response, UpdateCredentialsRequest update) {
+        this.response = response;
+        this.errorMessage = errorMessagesUpdateCredentials.getOrDefault(response, "other error cases");
     }
 }
+
+//    public int getResponse() {
+//        return response;
+//    }
+//
+//    public String getErrorMessage() {
+//        return errorMessage;
+//    }

@@ -85,7 +85,7 @@ public class ServerThread implements Runnable {
 
             // Update the map with the received user
             if (users.containsKey(user.getUsername())){
-                responseStatus = new ResponseStatus(102);
+                responseStatus = new ResponseStatus(102, reg);
             }
             else {
                 users.put(user.getUsername(), user);
@@ -94,7 +94,7 @@ public class ServerThread implements Runnable {
                 try (FileWriter writer = new FileWriter("users.json")) {
                     gson.toJson(users, writer);
                 }
-                responseStatus = new ResponseStatus(100);
+                responseStatus = new ResponseStatus(100, reg);
             }
 
             // Send responseStatus to the Client
@@ -127,7 +127,7 @@ public class ServerThread implements Runnable {
             // LA NUOVA PASSWORD NON PUÒ ESSERE UGUALE ALLA PRECEDENTE
             if (values.comparePasswords()) {
                 System.out.println("passwords are equal");
-                responseStatus = new ResponseStatus(103);
+                responseStatus = new ResponseStatus(103, update);
             }
             else {
 
@@ -158,16 +158,16 @@ public class ServerThread implements Runnable {
                             gson.toJson(users, writer);
                         }
 
-                        responseStatus = new ResponseStatus(100);
+                        responseStatus = new ResponseStatus(100, update);
                     }
                     else {
                         System.out.println("passwords mismatch");
-                        responseStatus = new ResponseStatus(102);
+                        responseStatus = new ResponseStatus(102, update);
                     }
                 }
                 else {
                     System.out.println("User not found");
-                    responseStatus = new ResponseStatus(102);
+                    responseStatus = new ResponseStatus(102, update);
                 }
             }
 
