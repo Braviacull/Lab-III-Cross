@@ -18,28 +18,44 @@ public class ClientMain {
     private String serverIP;
     private int port;
     private String stopString;
+    private Gson gson;
 
 
     public ClientMain(){
         try{
-            // Carica le proprietà dal file di configurazione
-            Properties properties = new Properties();
-            FileInputStream fis = new FileInputStream("server.properties");
-            properties.load(fis);
-
-            serverIP = properties.getProperty("server.ip");
-            port = Integer.parseInt(properties.getProperty("server.port"));
-            stopString = properties.getProperty("server.stop_string");
-            // Proprietà caricate
+            getProperties("client.properties");
 
             socket = new Socket(serverIP, port);
             out = new DataOutputStream(socket.getOutputStream());
             in = new DataInputStream(socket.getInputStream());
             scanner = new Scanner(System.in);
+
+            gson = new Gson();
+
             writeMessages();
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void getProperties(String name) {
+        try {
+            Properties properties = new Properties();
+            FileInputStream fis = new FileInputStream(name);
+            properties.load(fis);
+
+            serverIP = properties.getProperty("server.ip");
+            port = Integer.parseInt(properties.getProperty("server.port"));
+            stopString = properties.getProperty("server.stop_string");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void close() throws IOException {
+        socket.close();
+        out.close();
+        scanner.close();
     }
 
     private void writeMessages() throws IOException {
@@ -63,7 +79,7 @@ public class ClientMain {
                 default:
                     break;
             }
-            
+
             // Print response received from server
             if (!line.equals(stopString))
                 System.out.println(in.readUTF());
@@ -73,7 +89,7 @@ public class ClientMain {
 
     private void send_request (String jsonRequest) {
         try {
-            // Send JSON to the ServerMain
+            // Send JSON to the Server
             out.writeUTF(jsonRequest);
             out.flush();
         } catch (IOException e) {
@@ -84,7 +100,6 @@ public class ClientMain {
     private void register () {
         String username = "";
         String password= "";
-        Gson gson = new Gson();
 
         System.out.println("Enter username");
         username = scanner.nextLine();
@@ -94,21 +109,13 @@ public class ClientMain {
         RegistrationRequest reg = RequestFactory.createRegistrationRequest(username, password);
         String jsonReg = gson.toJson(reg);
 
-        try {
-            // Send JSON to the ServerMain
-            out.writeUTF(jsonReg);
-            out.flush();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        send_request(jsonReg);
     }
 
     private void updateCredentials() {
         String username = "";
         String old_password= "";
         String new_password= "";
-        Gson gson = new Gson();
 
         System.out.println("Enter username");
         username = scanner.nextLine();
@@ -121,12 +128,6 @@ public class ClientMain {
         String jsonUpdate = gson.toJson(update);
 
         send_request(jsonUpdate);
-    }
-
-    private void close() throws IOException {
-        socket.close();
-        out.close();
-        scanner.close();
     }
 
     public static void main(String[] args) {

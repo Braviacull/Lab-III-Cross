@@ -19,7 +19,7 @@ public class ServerMain {
 
     public ServerMain() {
         try {
-            getProperties();
+            getProperties("server.properties");
 
             connessioni = Executors.newCachedThreadPool();
 
@@ -32,11 +32,10 @@ public class ServerMain {
         }
     }
 
-    private void getProperties() {
-        // Proprietà caricate
+    private void getProperties(String name) {
         try {
             Properties properties = new Properties();
-            FileInputStream fis = new FileInputStream("server.properties");
+            FileInputStream fis = new FileInputStream(name);
             properties.load(fis);
 
             serverIP = properties.getProperty("server.ip");

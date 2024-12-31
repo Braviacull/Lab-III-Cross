@@ -3,7 +3,7 @@ import com.google.gson.*;
 import java.io.FileWriter;
 import java.io.IOException;
 
-public class Test {
+public class Z {
     public static void main (String[] args) {
         try {
             Gson gson = new Gson();
