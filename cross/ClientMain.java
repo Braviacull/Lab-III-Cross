@@ -44,17 +44,34 @@ public class ClientMain {
 
     private void writeMessages() throws IOException {
         System.out.println("Type " + stopString + " to stop");
-        System.out.println("Azioni possibili: (register)");
         String line = "";
         while(!line.equals(stopString)){
+            System.out.println("Azioni possibili: (##, register, updateCredentials)");
             line = scanner.nextLine();
             out.writeUTF(line);
             System.out.println(in.readUTF());
+            // CONSIDERA la possibilità di USARE UNO SWITCH
             if (line.compareTo("register") == 0) {
                 register();
             }
+            else if (line.compareTo("updateCredentials") == 0) {
+                updateCredentials();
+            }
         }
         close();
+    }
+
+    private void send_request (String jsonRequest) {
+        try {
+            // Send JSON to the ServerMain
+            out.writeUTF(jsonRequest);
+            out.flush();
+            // Receive a responseStatus
+            String responseStatus = in.readUTF();
+            System.out.println(responseStatus);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void register () {
@@ -80,6 +97,25 @@ public class ClientMain {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void updateCredentials() {
+        String username = "";
+        String old_password= "";
+        String new_password= "";
+        Gson gson = new Gson();
+
+        System.out.println("Enter username");
+        username = scanner.nextLine();
+        System.out.println("Enter old password");
+        old_password = scanner.nextLine();
+        System.out.println("Enter new password");
+        new_password = scanner.nextLine();
+
+        UpdateCredentialsRequest update = RequestFactory.createUpdateCredentialsRequest(username, old_password, new_password);
+        String jsonUpdate = gson.toJson(update);
+
+        send_request(jsonUpdate);
     }
 
     private void close() throws IOException {

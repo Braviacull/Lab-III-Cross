@@ -8,14 +8,6 @@ public class RegistrationRequest extends Request {
         this.values = values;
     }
 
-    public Values getValues() {
-        return values;
-    }
-
-//    public void setValues(Values values) {
-//        this.values = values;
-//    }
-
     public static class Values {
         private String username;
         private String password;
@@ -25,9 +17,19 @@ public class RegistrationRequest extends Request {
             this.password = password;
         }
 
-        public String getUsername() {
-            return username;
+        public User getUser () {
+            return new User (username, password);
         }
+    }
+
+    public Values getValues() {
+        return values;
+    }
+}
+
+//    public void setValues(Values values) {
+//        this.values = values;
+//    }
 //
 //        public void setUsername(String username) {
 //            this.username = username;
@@ -40,5 +42,3 @@ public class RegistrationRequest extends Request {
 //        public void setPassword(String password) {
 //            this.password = password;
 //        }
-    }
-}

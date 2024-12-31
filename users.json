@@ -1,18 +1,10 @@
 {
-  "mamma": {
-    "username": "mamma",
-    "password": "mipiaccionoicolori"
-  },
   "madonna": {
     "username": "madonna",
     "password": "puttana"
   },
-  "stocazzo": {
-    "username": "stocazzo",
-    "password": "stocazzo"
-  },
-  "alessio": {
-    "username": "alessio",
-    "password": "iacullo"
+  "Alessio": {
+    "username": "Alessio",
+    "password": "1234"
   }
 }
