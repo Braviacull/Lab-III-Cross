@@ -47,16 +47,26 @@ public class ClientMain {
         String line = "";
         while(!line.equals(stopString)){
             System.out.println("Azioni possibili: (##, register, updateCredentials)");
+
             line = scanner.nextLine();
+
             out.writeUTF(line);
-            System.out.println(in.readUTF());
-            // CONSIDERA la possibilità di USARE UNO SWITCH
-            if (line.compareTo("register") == 0) {
-                register();
+
+            // Manage cases
+            switch (line) {
+                case "register":
+                    register();
+                    break;
+                case "updateCredentials":
+                    updateCredentials();
+                    break;
+                default:
+                    break;
             }
-            else if (line.compareTo("updateCredentials") == 0) {
-                updateCredentials();
-            }
+            
+            // Print response received from server
+            if (!line.equals(stopString))
+                System.out.println(in.readUTF());
         }
         close();
     }
@@ -66,9 +76,6 @@ public class ClientMain {
             // Send JSON to the ServerMain
             out.writeUTF(jsonRequest);
             out.flush();
-            // Receive a responseStatus
-            String responseStatus = in.readUTF();
-            System.out.println(responseStatus);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -91,9 +98,7 @@ public class ClientMain {
             // Send JSON to the ServerMain
             out.writeUTF(jsonReg);
             out.flush();
-            // Receive a responseStatus
-            String responseStatus = in.readUTF();
-            System.out.println(responseStatus);
+
         } catch (IOException e) {
             e.printStackTrace();
         }

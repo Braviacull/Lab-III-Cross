@@ -19,12 +19,12 @@ public class UpdateCredentialsRequest extends Request{
             this.new_password = new_password;
         }
 
-        public User getNewUser() {
-            return new User (username, new_password);
-        }
-
         public User getOldUser() {
             return new User (username, old_password);
+        }
+
+        public User getNewUser() {
+            return new User (username, new_password);
         }
 
         public boolean comparePasswords () {

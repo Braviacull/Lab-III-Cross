@@ -20,7 +20,7 @@ public class ResponseStatus {
     static {
         errorMessagesUpdateCredentials.put(100, "OK");
         errorMessagesUpdateCredentials.put(101, "invalid new password");
-        errorMessagesUpdateCredentials.put(102, "username/lod_password mismatch or non existent username");
+        errorMessagesUpdateCredentials.put(102, "username/old_password mismatch or non existent username");
         errorMessagesUpdateCredentials.put(103, "new password equal to old one");
         errorMessagesUpdateCredentials.put(104, "user currently logged in");
     }
@@ -33,6 +33,11 @@ public class ResponseStatus {
     public ResponseStatus(int response, UpdateCredentialsRequest update) {
         this.response = response;
         this.errorMessage = errorMessagesUpdateCredentials.getOrDefault(response, "other error cases");
+    }
+
+    public ResponseStatus(){
+        this.response = 99;
+        this.errorMessage = "Command not found";
     }
 }
 

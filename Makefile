@@ -1,7 +1,7 @@
 # Variabili
 JAVAC = javac
 JAR = lib/gson-2.11.0.jar
-JAVA_FILES = cross/ServerMain.java cross/ServerThread.java cross/ClientMain.java
+JAVA_FILES = cross/ServerMain.java cross/ClientMain.java
 TARGET_DIR = cross
 CLASSPATH = .;$(JAR)
 
