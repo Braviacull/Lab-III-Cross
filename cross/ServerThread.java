@@ -36,8 +36,8 @@ public class ServerThread implements Runnable {
                 System.out.println(line);
                 out.writeUTF("Received");
                 out.flush();
-                if (line.compareTo("registration") == 0){
-                    handleRegistration();
+                if (line.compareTo("register") == 0){
+                    handleregister();
                 }
             }
             in.close();
@@ -48,10 +48,10 @@ public class ServerThread implements Runnable {
         }
     }
 
-    private HashMap<String, User> getUserHashMap (Gson gson) {
-        HashMap<String, User> users = new HashMap<>();
+    private HashMap<String, RegistrationRequest.Values> getUserHashMap (Gson gson) {
+        HashMap<String, RegistrationRequest.Values> users = new HashMap<>();
         try (FileReader reader = new FileReader("users.json")) {
-            Type userMapType = new TypeToken<HashMap<String, User>>(){}.getType();
+            Type userMapType = new TypeToken<HashMap<String, RegistrationRequest.Values>>(){}.getType();
             users = gson.fromJson(reader, userMapType);
         } catch (IOException e) {
             // File not found, will create a new one
@@ -59,16 +59,21 @@ public class ServerThread implements Runnable {
         return users;
     }
 
-    private void handleRegistration() {
+    private void handleregister() {
         try {
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
-            HashMap<String, User> users = new HashMap<>();
+            HashMap<String, RegistrationRequest.Values> users = new HashMap<>();
             ResponseStatus responseStatus;
 
             // receive JSON from the ClientMain
             String json = in.readUTF();
+
+            RegistrationRequest reg = gson.fromJson(json, RegistrationRequest.class);
             // deserialize the json in a User obj
-            User user = gson.fromJson(json, User.class);
+            RegistrationRequest.Values user = reg.getValues();
+//            User user = gson.fromJson(json, User.class);
+
+            System.out.println(json);
 
             // Read existing users from the file, if the file is not empty
             File file = new File("users.json");
@@ -96,7 +101,7 @@ public class ServerThread implements Runnable {
             out.flush();
 
         } catch (IOException e) {
-            System.err.println("Error during registration: " + e.getMessage());
+            System.err.println("Error during register: " + e.getMessage());
             e.printStackTrace();
         }
     }

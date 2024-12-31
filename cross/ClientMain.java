@@ -44,35 +44,35 @@ public class ClientMain {
 
     private void writeMessages() throws IOException {
         System.out.println("Type " + stopString + " to stop");
-        System.out.println("Azioni possibili: (registration)");
+        System.out.println("Azioni possibili: (register)");
         String line = "";
         while(!line.equals(stopString)){
             line = scanner.nextLine();
             out.writeUTF(line);
             System.out.println(in.readUTF());
-            if (line.compareTo("registration") == 0) {
-                registration();
+            if (line.compareTo("register") == 0) {
+                register();
             }
         }
         close();
     }
 
-    private void registration () {
+    private void register () {
         String username = "";
         String password= "";
+        Gson gson = new Gson();
 
         System.out.println("Enter username");
         username = scanner.nextLine();
         System.out.println("Enter password");
         password = scanner.nextLine();
 
-        User user = new User(username, password);
-        Gson gson = new Gson();
-        String jsonUser = gson.toJson(user);
+        RegistrationRequest reg = RequestFactory.createRegistrationRequest(username, password);
+        String jsonReg = gson.toJson(reg);
 
         try {
             // Send JSON to the ServerMain
-            out.writeUTF(jsonUser);
+            out.writeUTF(jsonReg);
             out.flush();
             // Receive a responseStatus
             String responseStatus = in.readUTF();
