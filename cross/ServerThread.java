@@ -62,13 +62,16 @@ public class ServerThread implements Runnable {
                     case "login":
                         handleLogin();
                         break;
+                    case "logout":
+                        handleLogout();
+                        break;
                     default:
                         responseStatus = new ResponseStatus();
                         break;
                 }
 
-                System.out.println(loggedIn);
-                System.out.println(username);
+                if (loggedIn)
+                    System.out.println(username + " logged in");
 
                 // Send response
                 out.writeUTF(gson.toJson(responseStatus));
@@ -208,7 +211,7 @@ public class ServerThread implements Runnable {
                 
                 // OLD PASSWORD MUST MATCH WITH THE ONE IN usersMap.json
                 if (gson.toJson(registeredUser).equals(gson.toJson(old_user))) {
-                    System.out.println("passwords MATCHES");
+                    System.out.println("passwords match");
 
                     // get new_user from values
                     User new_user = values.getNewUser();
@@ -227,6 +230,36 @@ public class ServerThread implements Runnable {
             else {
                 System.out.println("User not found");
                 responseStatus = new ResponseStatus(102, update);
+            }
+        } catch (IOException e) {
+            System.err.println("Error during register: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void handleLogout () {
+        try {
+            // receive JSON from the ClientMain
+            String jsonRequest = in.readUTF();
+            
+            // deserialize the json
+            LogoutRequest logout = gson.fromJson(jsonRequest, LogoutRequest.class);
+
+            // logout.Values is an empty obj so we need to receive username separately
+            String username = in.readUTF();
+            
+            if (!loggedIn){
+                responseStatus = new ResponseStatus(101, logout);
+                return;
+            }
+
+            if (this.username.equals(username)) {
+                loggedIn = false;
+                this.username = "";
+                responseStatus = new ResponseStatus(100, logout);
+            }
+            else {
+                responseStatus = new ResponseStatus(101, logout);
             }
         } catch (IOException e) {
             System.err.println("Error during register: " + e.getMessage());

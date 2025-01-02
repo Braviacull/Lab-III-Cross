@@ -16,4 +16,9 @@ public class RequestFactory {
         LoginRequest.Values values = new LoginRequest.Values(username, password);
         return new LoginRequest("login", values);
     }
+
+    public static LogoutRequest createLogoutRequest() {
+        LogoutRequest.Values values = new LogoutRequest.Values();
+        return new LogoutRequest("logout", values);
+    }
 }
