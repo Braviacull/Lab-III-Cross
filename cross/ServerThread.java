@@ -3,7 +3,7 @@ package cross;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.lang.reflect.Type;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -11,8 +11,6 @@ import java.io.FileWriter;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.Socket;
-import java.io.File;
-import java.io.FileNotFoundException;
 
 public class ServerThread implements Runnable {
     private final Socket clientSocket;
@@ -20,14 +18,16 @@ public class ServerThread implements Runnable {
     private DataInputStream in;
     private DataOutputStream out;
     private Gson gson;
-    private HashMap<String, User> usersMap;
     private ResponseStatus responseStatus;
+    private ConcurrentHashMap<String, User> usersMap;
+    private ConcurrentHashMap<String, User> usersLogMap;
 
-    public ServerThread(Socket socket, String stopString) {
-        this.clientSocket = socket;
+    public ServerThread(Socket socket, String stopString, ConcurrentHashMap<String, User> usersMap, Gson gson) {
+        clientSocket = socket;
         this.stopString = stopString;
-        this.gson = new GsonBuilder().setPrettyPrinting().create();
-        this.usersMap = new HashMap<>();
+        this.gson = gson;
+        this.usersMap = usersMap;
+        this.usersLogMap = new ConcurrentHashMap<String, User>();
     }
 
     private void close () throws IOException {
@@ -37,10 +37,11 @@ public class ServerThread implements Runnable {
 
     public void run (){
         try {
+            System.out.println("Server listening");
+
             in = new DataInputStream(clientSocket.getInputStream());
             out = new DataOutputStream(clientSocket.getOutputStream());
 
-            System.out.println("Server listening");
             String line = "";
             while (!line.equals(stopString)) {
                 // receiving line from client
@@ -69,26 +70,25 @@ public class ServerThread implements Runnable {
         }
     }
 
-    // If user.json does not exist, will be created
-    private HashMap<String, User> getUserHashMap(Gson gson) {
-        HashMap<String, User> usersMap = new HashMap<>();
-        File file = new File("usersMap.json");
-        if (file.length() != 0) {
-            try (FileReader reader = new FileReader("usersMap.json")) {
-                Type userMapType = new TypeToken<HashMap<String, User>>(){}.getType();
-                usersMap = gson.fromJson(reader, userMapType);
-            } catch (FileNotFoundException e) {
-                // File not found, will create a new file
-                try (FileWriter writer = new FileWriter("usersMap.json")) {
-                    gson.toJson(usersMap, writer);
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+    private synchronized void updateUserslogJson(User user) {
+        usersLogMap = loadMapFromJson("usersLogMap.json");
+        usersLogMap.put(user.getUsername(), user);
+        try (FileWriter writer = new FileWriter("usersLogMap.json")) {
+            gson.toJson(usersLogMap, writer);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return usersMap;
+    }
+
+    private synchronized ConcurrentHashMap<String, User> loadMapFromJson(String name) {
+        ConcurrentHashMap<String, User> Map = new ConcurrentHashMap<String, User>();
+        try (FileReader reader = new FileReader(name)) {
+            Type userMapType = new TypeToken<ConcurrentHashMap<String, User>>(){}.getType();
+            Map = gson.fromJson(reader, userMapType);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return Map;
     }
 
     private void handleregister() {
@@ -105,20 +105,14 @@ public class ServerThread implements Runnable {
             //get the User obj
             User user = values.getUser();
 
-            // Get the hashmap from usersMap.json
-            usersMap = getUserHashMap(gson);
-
             // Update the map with the received user
             if (usersMap.containsKey(user.getUsername())){
                 responseStatus = new ResponseStatus(102, reg);
             }
             else {
                 usersMap.put(user.getUsername(), user);
+                updateUserslogJson(user);
                 System.out.println("User registered successfully");
-                // update usersMap.json with the new registered user
-                try (FileWriter writer = new FileWriter("usersMap.json")) {
-                    gson.toJson(usersMap, writer);
-                }
                 responseStatus = new ResponseStatus(100, reg);
             }
         } catch (IOException e) {
@@ -145,9 +139,6 @@ public class ServerThread implements Runnable {
                 responseStatus = new ResponseStatus(103, update);
                 return;
             }
-            
-            // Get the hashmap from usersMap.json
-            usersMap = getUserHashMap(gson);
 
             //get old_user from values
             User old_user = values.getOldUser();
@@ -168,11 +159,8 @@ public class ServerThread implements Runnable {
 
                     // replace the old user in the hashMap with the updated user
                     usersMap.put(username, new_user);
-
-                    // update usersMap.json
-                    try (FileWriter writer = new FileWriter("usersMap.json")) {
-                        gson.toJson(usersMap, writer);
-                    }
+                    updateUserslogJson(new_user);
+                    
                     responseStatus = new ResponseStatus(100, update);
                 }
                 else {
