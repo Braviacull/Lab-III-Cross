@@ -4,50 +4,30 @@ import com.google.gson.*;
 
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.Properties;
 import java.util.Scanner;
 
 public class ClientMain {
-    private String serverIP;
-    private int port;
-    private String stopString;
+    private MyProperties properties;
     private Socket socket;
     private DataOutputStream out;
     private DataInputStream in;
     private Scanner scanner;
     private Gson gson;
 
-
     public ClientMain(){
         try{
-            getProperties("client.properties");
+            properties = new MyProperties("client.properties");
 
-            socket = new Socket(serverIP, port);
+            socket = new Socket(properties.getServerIP(), properties.getPort());
             out = new DataOutputStream(socket.getOutputStream());
             in = new DataInputStream(socket.getInputStream());
             scanner = new Scanner(System.in);
-
             gson = new Gson();
 
             writeMessages();
         } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void getProperties(String name) {
-        try {
-            Properties properties = new Properties();
-            FileInputStream fis = new FileInputStream(name);
-            properties.load(fis);
-
-            serverIP = properties.getProperty("server.ip");
-            port = Integer.parseInt(properties.getProperty("server.port"));
-            stopString = properties.getProperty("server.stop_string");
-        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -59,9 +39,9 @@ public class ClientMain {
     }
 
     private void writeMessages() throws IOException {
-        System.out.println("Type " + stopString + " to stop");
+        System.out.println("Type " + properties.getStopString()+ " to stop");
         String line = "";
-        while(!line.equals(stopString)){
+        while(!line.equals(properties.getStopString())){
             System.out.println("Azioni possibili: (##, register, updateCredentials)");
 
             line = scanner.nextLine();
@@ -81,13 +61,13 @@ public class ClientMain {
             }
 
             // Print response received from server
-            if (!line.equals(stopString))
+            if (!line.equals(properties.getStopString()))
                 System.out.println(in.readUTF());
         }
         close();
     }
 
-    private void send_request (String jsonRequest) {
+    private void sendRequest (String jsonRequest) {
         try {
             // Send JSON to the Server
             out.writeUTF(jsonRequest);
@@ -97,7 +77,7 @@ public class ClientMain {
         }
     }
 
-    private String scan_field (String field) {
+    private String scanField (String field) {
         String res = "";
         while (true){
             System.out.println("Enter " + field);
@@ -110,24 +90,24 @@ public class ClientMain {
     }
 
     private void register () {
-        String username = scan_field("username");
-        String password= scan_field("password");        
+        String username = scanField("username");
+        String password= scanField("password");        
 
         RegistrationRequest reg = RequestFactory.createRegistrationRequest(username, password);
         String jsonReg = gson.toJson(reg);
 
-        send_request(jsonReg);
+        sendRequest(jsonReg);
     }
 
     private void updateCredentials() {
-        String username = scan_field("username");
-        String old_password= scan_field("old password");
-        String new_password= scan_field("new password");
+        String username = scanField("username");
+        String old_password= scanField("old password");
+        String new_password= scanField("new password");
 
         UpdateCredentialsRequest update = RequestFactory.createUpdateCredentialsRequest(username, old_password, new_password);
         String jsonUpdate = gson.toJson(update);
 
-        send_request(jsonUpdate);
+        sendRequest(jsonUpdate);
     }
 
     public static void main(String[] args) {

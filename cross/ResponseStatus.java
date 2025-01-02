@@ -39,12 +39,13 @@ public class ResponseStatus {
         this.response = 99;
         this.errorMessage = "Command not found";
     }
+    
+    public int getResponse() {
+        return response;
+    }
+    
+    public String getErrorMessage() {
+        return errorMessage;
+    }
 }
 
-//    public int getResponse() {
-//        return response;
-//    }
-//
-//    public String getErrorMessage() {
-//        return errorMessage;
-//    }

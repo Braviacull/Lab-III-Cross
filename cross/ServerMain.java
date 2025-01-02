@@ -1,6 +1,5 @@
 package cross;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -9,7 +8,6 @@ import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -19,10 +17,8 @@ import com.google.gson.reflect.TypeToken;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerMain {
+    private MyProperties properties;
     private Gson gson;
-    private String serverIP;
-    private int port;
-    private String stopString;
     private ServerSocket server;
     private ExecutorService connessioni;
     private ConcurrentHashMap<String, User> usersMap;
@@ -30,9 +26,8 @@ public class ServerMain {
 
     public ServerMain() {
         try {
+            properties = new MyProperties("server.properties");
             gson = new GsonBuilder().setPrettyPrinting().create();
-
-            getProperties("server.properties");
 
             usersLogMap = new ConcurrentHashMap<String, User>();
             usersMap = new ConcurrentHashMap<String, User>();
@@ -48,7 +43,7 @@ public class ServerMain {
                 e.printStackTrace();
             }
             
-            server = new ServerSocket(port, 50, InetAddress.getByName(serverIP));
+            server = new ServerSocket(properties.getPort(), 50, InetAddress.getByName(properties.getServerIP()));
             
             acceptConnections();
         } catch (IOException e) {
@@ -86,27 +81,13 @@ public class ServerMain {
         return Map;
     }
 
-    private void getProperties(String name) {
-        try {
-            Properties properties = new Properties();
-            FileInputStream fis = new FileInputStream(name);
-            properties.load(fis);
-
-            serverIP = properties.getProperty("server.ip");
-            port = Integer.parseInt(properties.getProperty("server.port"));
-            stopString = properties.getProperty("server.stop_string");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     private void acceptConnections() throws IOException {
         System.out.println("ServerMain started");
         connessioni = Executors.newCachedThreadPool();
         try {
             while (true) {
                 Socket clientSocket = server.accept();
-                connessioni.execute(new ServerThread(clientSocket, stopString, usersMap, gson));
+                connessioni.execute(new ServerThread(clientSocket, properties.getStopString(), usersMap, gson));
             }
         }
         catch (Exception e) {
