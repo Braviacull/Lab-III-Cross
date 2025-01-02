@@ -105,6 +105,10 @@ public class ServerThread implements Runnable {
             //get the User obj
             User user = values.getUser();
 
+            if (user.getUsername().length() == 0) {
+                System.out.println("TROVATO");
+            }
+
             // Update the map with the received user
             if (usersMap.containsKey(user.getUsername())){
                 responseStatus = new ResponseStatus(102, reg);

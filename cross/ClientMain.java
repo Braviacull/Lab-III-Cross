@@ -11,13 +11,13 @@ import java.util.Properties;
 import java.util.Scanner;
 
 public class ClientMain {
+    private String serverIP;
+    private int port;
+    private String stopString;
     private Socket socket;
     private DataOutputStream out;
     private DataInputStream in;
     private Scanner scanner;
-    private String serverIP;
-    private int port;
-    private String stopString;
     private Gson gson;
 
 
@@ -97,14 +97,21 @@ public class ClientMain {
         }
     }
 
-    private void register () {
-        String username = "";
-        String password= "";
+    private String scan_field (String field) {
+        String res = "";
+        while (true){
+            System.out.println("Enter " + field);
+            res = scanner.nextLine();
+            if (res.equals(""))
+                System.out.println(field + " cannot be empty");
+            else break;
+        }
+        return res;
+    }
 
-        System.out.println("Enter username");
-        username = scanner.nextLine();
-        System.out.println("Enter password");
-        password = scanner.nextLine();
+    private void register () {
+        String username = scan_field("username");
+        String password= scan_field("password");        
 
         RegistrationRequest reg = RequestFactory.createRegistrationRequest(username, password);
         String jsonReg = gson.toJson(reg);
@@ -113,16 +120,9 @@ public class ClientMain {
     }
 
     private void updateCredentials() {
-        String username = "";
-        String old_password= "";
-        String new_password= "";
-
-        System.out.println("Enter username");
-        username = scanner.nextLine();
-        System.out.println("Enter old password");
-        old_password = scanner.nextLine();
-        System.out.println("Enter new password");
-        new_password = scanner.nextLine();
+        String username = scan_field("username");
+        String old_password= scan_field("old password");
+        String new_password= scan_field("new password");
 
         UpdateCredentialsRequest update = RequestFactory.createUpdateCredentialsRequest(username, old_password, new_password);
         String jsonUpdate = gson.toJson(update);
