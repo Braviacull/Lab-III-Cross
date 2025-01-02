@@ -21,6 +21,8 @@ public class ServerThread implements Runnable {
     private ResponseStatus responseStatus;
     private ConcurrentHashMap<String, User> usersMap;
     private ConcurrentHashMap<String, User> usersLogMap;
+    private String username; // potrebbe non servire
+    private Boolean loggedIn;
 
     public ServerThread(Socket socket, String stopString, ConcurrentHashMap<String, User> usersMap, Gson gson) {
         clientSocket = socket;
@@ -28,6 +30,8 @@ public class ServerThread implements Runnable {
         this.gson = gson;
         this.usersMap = usersMap;
         this.usersLogMap = new ConcurrentHashMap<String, User>();
+        username = "";
+        loggedIn = false;
     }
 
     private void close () throws IOException {
@@ -55,10 +59,17 @@ public class ServerThread implements Runnable {
                     case "updateCredentials":
                         handleupdateCredentials();
                         break;
+                    case "login":
+                        handleLogin();
+                        break;
                     default:
                         responseStatus = new ResponseStatus();
                         break;
                 }
+
+                System.out.println(loggedIn);
+                System.out.println(username);
+
                 // Send response
                 out.writeUTF(gson.toJson(responseStatus));
             }
@@ -105,10 +116,6 @@ public class ServerThread implements Runnable {
             //get the User obj
             User user = values.getUser();
 
-            if (user.getUsername().length() == 0) {
-                System.out.println("TROVATO");
-            }
-
             // Update the map with the received user
             if (usersMap.containsKey(user.getUsername())){
                 responseStatus = new ResponseStatus(102, reg);
@@ -125,14 +132,59 @@ public class ServerThread implements Runnable {
         }
     }
 
+    private void handleLogin() {
+        try {
+            // receive JSON from the ClientMain
+            String json = in.readUTF();
+
+            // deserialize the json
+            LoginRequest login = gson.fromJson(json, LoginRequest.class);
+
+            if (loggedIn) {
+                responseStatus = new ResponseStatus(102, login);
+                return;
+            }
+
+            // get values (username, password) from reg
+            LoginRequest.Values values = login.getValues();
+
+            //get the User obj
+            User user = values.getUser();
+
+            // Check if the user is among the registered users
+            if (!usersMap.containsKey(user.getUsername())){
+                responseStatus = new ResponseStatus(101, login);
+            }
+            else if (usersMap.containsKey(user.getUsername())){
+                User registeredUser = usersMap.get(user.getUsername());
+
+                // OLD PASSWORD MUST MATCH WITH THE ONE IN usersMap.json
+                if (gson.toJson(registeredUser).equals(gson.toJson(user))){
+                    loggedIn = true;
+                    username = user.getUsername();
+                    responseStatus = new ResponseStatus(100, login);
+                }
+                else responseStatus = new ResponseStatus(101, login);
+            }
+        } catch (IOException e) {
+            System.err.println("Error during register: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     private void handleupdateCredentials () {
-        // UN UTENTE ATTUALMENTE LOGGATO NON PUÒ AGGIORNARE LA PROPRIA PASSWORD
         try {
             // receive JSON from the ClientMain
             String json = in.readUTF(); // updateCredentialsRequest
 
             // deserialize the json in a User obj
             UpdateCredentialsRequest update = gson.fromJson(json, UpdateCredentialsRequest.class);
+
+            // Un utente loggato non può cambiare la password
+            if (loggedIn) {
+                responseStatus = new ResponseStatus(104, update);
+                return;
+            }
 
             // get values (username, old_password, new_password) from update
             UpdateCredentialsRequest.Values values = update.getValues();
@@ -152,10 +204,10 @@ public class ServerThread implements Runnable {
 
             // Check if the user is registered
             if (usersMap.containsKey(username)) {
-                User hashUser = usersMap.get(username);
+                User registeredUser = usersMap.get(username);
                 
                 // OLD PASSWORD MUST MATCH WITH THE ONE IN usersMap.json
-                if (gson.toJson(hashUser).equals(gson.toJson(old_user))) {
+                if (gson.toJson(registeredUser).equals(gson.toJson(old_user))) {
                     System.out.println("passwords MATCHES");
 
                     // get new_user from values

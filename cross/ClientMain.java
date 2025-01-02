@@ -32,17 +32,11 @@ public class ClientMain {
         }
     }
 
-    private void close() throws IOException {
-        socket.close();
-        out.close();
-        scanner.close();
-    }
-
     private void writeMessages() throws IOException {
         System.out.println("Type " + properties.getStopString()+ " to stop");
         String line = "";
         while(!line.equals(properties.getStopString())){
-            System.out.println("Azioni possibili: (##, register, updateCredentials)");
+            System.out.println("Azioni possibili: (##, register, updateCredentials, login)");
 
             line = scanner.nextLine();
 
@@ -56,15 +50,26 @@ public class ClientMain {
                 case "updateCredentials":
                     updateCredentials();
                     break;
+                case "login":
+                    login();
+                    break;
                 default:
                     break;
             }
 
             // Print response received from server
-            if (!line.equals(properties.getStopString()))
-                System.out.println(in.readUTF());
+            if (!line.equals(properties.getStopString())){
+                String response = in.readUTF();
+                System.out.println(response);
+            }
         }
         close();
+    }
+
+    private void close() throws IOException {
+        socket.close();
+        out.close();
+        scanner.close();
     }
 
     private void sendRequest (String jsonRequest) {
@@ -108,6 +113,15 @@ public class ClientMain {
         String jsonUpdate = gson.toJson(update);
 
         sendRequest(jsonUpdate);
+    }
+
+    private void login () {
+        String username = scanField("username");
+        String password= scanField("password");
+        LoginRequest reg = RequestFactory.createLoginRequest(username, password);
+        String jsonReg = gson.toJson(reg);
+
+        sendRequest(jsonReg);
     }
 
     public static void main(String[] args) {

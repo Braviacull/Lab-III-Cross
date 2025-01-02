@@ -11,4 +11,9 @@ public class RequestFactory {
         UpdateCredentialsRequest.Values values = new UpdateCredentialsRequest.Values(username, old_password, new_password);
         return new UpdateCredentialsRequest("updateCredentials", values);
     }
+
+    public static LoginRequest createLoginRequest(String username, String password) {
+        LoginRequest.Values values = new LoginRequest.Values(username, password);
+        return new LoginRequest("login", values);
+    }
 }

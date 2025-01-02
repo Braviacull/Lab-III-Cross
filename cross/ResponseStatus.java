@@ -25,6 +25,14 @@ public class ResponseStatus {
         errorMessagesUpdateCredentials.put(104, "user currently logged in");
     }
 
+    private static final Map<Integer, String> errorMessagesLogin = new HashMap<>();
+
+    static {
+        errorMessagesLogin.put(100, "OK");
+        errorMessagesLogin.put(101, "username/password mismatch or non existent username");
+        errorMessagesLogin.put(102, "user already logged in");
+    }
+
     public ResponseStatus(int response, RegistrationRequest reg) {
         this.response = response;
         this.errorMessage = errorMessagesRegistration.getOrDefault(response, "other error cases");
@@ -33,6 +41,11 @@ public class ResponseStatus {
     public ResponseStatus(int response, UpdateCredentialsRequest update) {
         this.response = response;
         this.errorMessage = errorMessagesUpdateCredentials.getOrDefault(response, "other error cases");
+    }
+
+    public ResponseStatus(int response, LoginRequest login) {
+        this.response = response;
+        this.errorMessage = errorMessagesLogin.getOrDefault(response, "other error cases");
     }
 
     public ResponseStatus(){
