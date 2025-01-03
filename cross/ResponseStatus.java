@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ResponseStatus {
-    private int response;
+    private int responseCode;
     private String errorMessage;
 
     private static final Map<Integer, String> errorMessagesRegistration = new HashMap<>();
@@ -40,33 +40,33 @@ public class ResponseStatus {
         errorMessagesLogout.put(101, "username/connection mismatch or non existent username or user not logged in");
     }
 
-    public ResponseStatus(int response, RegistrationRequest reg) {
-        this.response = response;
-        this.errorMessage = errorMessagesRegistration.getOrDefault(response, "other error cases");
+    public ResponseStatus(int responseCode, RegistrationRequest reg) {
+        this.responseCode = responseCode;
+        this.errorMessage = errorMessagesRegistration.getOrDefault(responseCode, "other error cases");
     }
 
-    public ResponseStatus(int response, UpdateCredentialsRequest update) {
-        this.response = response;
-        this.errorMessage = errorMessagesUpdateCredentials.getOrDefault(response, "other error cases");
+    public ResponseStatus(int responseCode, UpdateCredentialsRequest update) {
+        this.responseCode = responseCode;
+        this.errorMessage = errorMessagesUpdateCredentials.getOrDefault(responseCode, "other error cases");
     }
 
-    public ResponseStatus(int response, LoginRequest login) {
-        this.response = response;
-        this.errorMessage = errorMessagesLogin.getOrDefault(response, "other error cases");
+    public ResponseStatus(int responseCode, LoginRequest login) {
+        this.responseCode = responseCode;
+        this.errorMessage = errorMessagesLogin.getOrDefault(responseCode, "other error cases");
     }
 
-    public ResponseStatus(int response, LogoutRequest logout) {
-        this.response = response;
-        this.errorMessage = errorMessagesLogout.getOrDefault(response, "other error cases");
+    public ResponseStatus(int responseCode, LogoutRequest logout) {
+        this.responseCode = responseCode;
+        this.errorMessage = errorMessagesLogout.getOrDefault(responseCode, "other error cases");
     }
 
     public ResponseStatus(){
-        this.response = 99;
+        this.responseCode = 99;
         this.errorMessage = "Command not found";
     }
     
-    public int getResponse() {
-        return response;
+    public int getResponseCode() {
+        return responseCode;
     }
     
     public String getErrorMessage() {

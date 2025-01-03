@@ -39,6 +39,38 @@ public class ClientMain {
         }
     }
 
+    private void checkResponse (String line, String username) {
+            try {
+                String response = in.readUTF();
+                ResponseStatus responseStatus = gson.fromJson(response, ResponseStatus.class);
+
+                int responseCode = responseStatus.getResponseCode();
+                String errorMessage = responseStatus.getErrorMessage();
+
+                // Print response received from server
+                if (!line.equals(properties.getStopString())){
+                    System.out.println(responseCode + " - " + errorMessage);
+                }
+
+                if (responseCode == 100){
+                    switch (line) {
+                        case "login":
+                            this.username = username;
+                            loggedIn = true;
+                            break;
+                        case "logout":
+                            this.username = "";
+                            loggedIn = false;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+    }
+
     private void writeMessages() throws IOException {
         System.out.println("Type " + properties.getStopString()+ " to stop");
         String line = "";
@@ -47,64 +79,62 @@ public class ClientMain {
         String old_password = "";
         String new_password = "";
         while(!line.equals(properties.getStopString())){
-            System.out.println("Azioni possibili: (##, register, updateCredentials, login, logout)");
-
-            line = scanner.nextLine();
-
-            out.writeUTF(line);
 
             // Manage cases
-            switch (line) {
-                case "register":
-                    username = scanField("username");
-                    password = scanField("password"); 
-                    register(username, password);
-                    break;
-                case "updateCredentials":
-                    username = scanField("username");
-                    old_password = scanField("old password");
-                    new_password = scanField("new password");
-                    updateCredentials(username, old_password, new_password);
-                    break;
-                case "login":
-                    username = scanField("username");
-                    password = scanField("password");                  
-                    login(username, password);
-                    break;
-                case "logout":
-                    logout(this.username);
-                    break;
-                default:
-                    break;
-            }
+            if (!loggedIn) {
+                System.out.println("Azioni possibili: (##, register, updateCredentials, login)");
 
-            String response = in.readUTF();
-            // Print response received from server
-            if (!line.equals(properties.getStopString())){
-                System.out.println(response);
-            }
+                line = scanner.nextLine();
 
-            if (line.equals("login")) {
-                ResponseStatus responseStatus = gson.fromJson(response, ResponseStatus.class);
-
-                if (responseStatus.getResponse() == 100) {
-                    this.username = username;
-                    loggedIn = true;
+                switch (line) {
+                    case "register":
+                        out.writeUTF(line);
+                        username = scanField("username");
+                        password = scanField("password"); 
+                        register(username, password);
+                        checkResponse(line, username);
+                        break;
+                    case "updateCredentials":
+                        out.writeUTF(line);
+                        username = scanField("username");
+                        old_password = scanField("old password");
+                        new_password = scanField("new password");
+                        updateCredentials(username, old_password, new_password);
+                        checkResponse(line, username);
+                        break;
+                    case "login":
+                        out.writeUTF(line);
+                        username = scanField("username");
+                        password = scanField("password");               
+                        login(username, password);
+                        checkResponse(line, username);
+                        break;
+                    default:
+                        if (!line.equals(properties.getStopString())){
+                            System.out.println("Azione non riconosciuta");
+                        }
+                        else {
+                            out.writeUTF(line);
+                        }
+                        break;
                 }
             }
+            else if (loggedIn) {
+                System.out.println("Azioni possibili: (##, logout)");
 
-            if (line.equals("logout")) {
-                ResponseStatus responseStatus = gson.fromJson(response, ResponseStatus.class);
+                line = scanner.nextLine();
 
-                if (responseStatus.getResponse() == 100) {
-                    this.username = "";
-                    loggedIn = false;
+                switch (line) {
+                    case "logout":
+                        out.writeUTF(line);
+                        logout(this.username);
+                        checkResponse(line, username);
+                        break;
+                    default:
+                        System.out.println("Azione non riconosciuta");
+                        break;
                 }
             }
-
-            if (loggedIn)
-                System.out.println(this.username + " logged in");
-
         }
         close();
     }

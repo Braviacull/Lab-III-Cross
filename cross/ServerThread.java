@@ -21,7 +21,7 @@ public class ServerThread implements Runnable {
     private ResponseStatus responseStatus;
     private ConcurrentHashMap<String, User> usersMap;
     private ConcurrentHashMap<String, User> usersLogMap;
-    private String username; // potrebbe non servire
+    private String username;
     private Boolean loggedIn;
 
     public ServerThread(Socket socket, String stopString, ConcurrentHashMap<String, User> usersMap, Gson gson) {
@@ -46,35 +46,33 @@ public class ServerThread implements Runnable {
             in = new DataInputStream(clientSocket.getInputStream());
             out = new DataOutputStream(clientSocket.getOutputStream());
 
-            String line = "";
-            while (!line.equals(stopString)) {
-                // receiving line from client
-                line = in.readUTF();
+            String operation = "";
+            while (!operation.equals(stopString)) {
+                // receiving operation from client
+                operation = in.readUTF();
 
                 // Manage cases
-                switch (line) {
+                switch (operation) {
                     case "register":
                         handleregister();
+                        out.writeUTF(gson.toJson(responseStatus));
                         break;
                     case "updateCredentials":
                         handleupdateCredentials();
+                        out.writeUTF(gson.toJson(responseStatus));
                         break;
                     case "login":
                         handleLogin();
+                        out.writeUTF(gson.toJson(responseStatus));
                         break;
                     case "logout":
                         handleLogout();
+                        out.writeUTF(gson.toJson(responseStatus));
                         break;
                     default:
-                        responseStatus = new ResponseStatus();
+                        System.out.println("Client disconnected");
                         break;
                 }
-
-                if (loggedIn)
-                    System.out.println(username + " logged in");
-
-                // Send response
-                out.writeUTF(gson.toJson(responseStatus));
             }
 
             close();
@@ -113,6 +111,11 @@ public class ServerThread implements Runnable {
             // deserialize the json
             RegistrationRequest reg = gson.fromJson(json, RegistrationRequest.class);
 
+            // Check if the operation is the expected one
+            if (!reg.getOperation().equals("register")) {
+                throw new IllegalArgumentException("Operazione non valida: " + reg.getOperation());
+            }
+
             // get values (username, password) from reg
             RegistrationRequest.Values values = reg.getValues();
 
@@ -146,6 +149,11 @@ public class ServerThread implements Runnable {
             if (loggedIn) {
                 responseStatus = new ResponseStatus(102, login);
                 return;
+            }
+
+            // Check if the operation is the expected one
+            if (!login.getOperation().equals("login")) {
+                throw new IllegalArgumentException("Operazione non valida: " + login.getOperation());
             }
 
             // get values (username, password) from reg
@@ -187,6 +195,11 @@ public class ServerThread implements Runnable {
             if (loggedIn) {
                 responseStatus = new ResponseStatus(104, update);
                 return;
+            }
+
+            // Check if the operation is the expected one
+            if (!update.getOperation().equals("updateCredentials")) {
+                throw new IllegalArgumentException("Operazione non valida: " + update.getOperation());
             }
 
             // get values (username, old_password, new_password) from update
@@ -251,6 +264,11 @@ public class ServerThread implements Runnable {
             if (!loggedIn){
                 responseStatus = new ResponseStatus(101, logout);
                 return;
+            }
+
+            // Check if the operation is the expected one
+            if (!logout.getOperation().equals("logout")) {
+                throw new IllegalArgumentException("Operazione non valida: " + logout.getOperation());
             }
 
             if (this.username.equals(username)) {
