@@ -11,9 +11,11 @@ import java.io.FileWriter;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.concurrent.ConcurrentMap;
 
 public class ServerThread implements Runnable {
     private final Socket clientSocket;
+    private MyProperties properties;
     private final String stopString;
     private DataInputStream in;
     private DataOutputStream out;
@@ -23,15 +25,18 @@ public class ServerThread implements Runnable {
     private ConcurrentHashMap<String, User> usersLogMap;
     private String username;
     private Boolean loggedIn;
+    private OrderBook orderBook;
 
-    public ServerThread(Socket socket, String stopString, ConcurrentHashMap<String, User> usersMap, Gson gson) {
+    public ServerThread(Socket socket, MyProperties properties, ConcurrentHashMap<String, User> usersMap, OrderBook orderBook, Gson gson) {
         clientSocket = socket;
-        this.stopString = stopString;
+        this.properties = properties; 
+        this.stopString = properties.getStopString();
         this.gson = gson;
         this.usersMap = usersMap;
         this.usersLogMap = new ConcurrentHashMap<String, User>();
         username = "";
         loggedIn = false;
+        this.orderBook = orderBook;
     }
 
     private void close () throws IOException {
@@ -55,19 +60,22 @@ public class ServerThread implements Runnable {
                 switch (operation) {
                     case "register":
                         handleregister();
-                        out.writeUTF(gson.toJson(responseStatus));
+                        out.writeUTF(gson.toJson(responseStatus)); // send response
                         break;
                     case "updateCredentials":
                         handleupdateCredentials();
-                        out.writeUTF(gson.toJson(responseStatus));
+                        out.writeUTF(gson.toJson(responseStatus)); // send response
                         break;
                     case "login":
                         handleLogin();
-                        out.writeUTF(gson.toJson(responseStatus));
+                        out.writeUTF(gson.toJson(responseStatus)); // send response
                         break;
                     case "logout":
                         handleLogout();
-                        out.writeUTF(gson.toJson(responseStatus));
+                        out.writeUTF(gson.toJson(responseStatus)); // send response
+                        break;
+                    case "insertLimitOrder":
+                        handleInsertLimitOrder();
                         break;
                     default:
                         System.out.println("Client disconnected");
@@ -82,11 +90,9 @@ public class ServerThread implements Runnable {
         }
     }
 
-    private synchronized void updateUserslogJson(User user) {
-        usersLogMap = loadMapFromJson("usersLogMap.json");
-        usersLogMap.put(user.getUsername(), user);
-        try (FileWriter writer = new FileWriter("usersLogMap.json")) {
-            gson.toJson(usersLogMap, writer);
+    private synchronized void updateJson (ConcurrentMap map, String jsonName) {
+        try (FileWriter writer = new FileWriter(jsonName)) {
+            gson.toJson(map, writer);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -101,6 +107,59 @@ public class ServerThread implements Runnable {
             e.printStackTrace();
         }
         return Map;
+    }
+
+    private void handleInsertLimitOrder () {
+        try {
+            // receive JSON from the ClientMain
+            String json = in.readUTF();
+
+            // deserialize the json
+            InsertLimitOrderRequest insertLO = gson.fromJson(json, InsertLimitOrderRequest.class);
+
+            // Check if the operation is the expected one
+            if (!insertLO.getOperation().equals("insertLimitOrder")) {
+                throw new IllegalArgumentException("Operazione non valida: " + insertLO.getOperation());
+            }
+
+            // get values (type, size, price) from insertLO
+            InsertLimitOrderRequest.Values values = insertLO.getValues();
+
+            String type = values.getType();
+            int size = values.getSize();
+            int price = values.getPrice();
+
+            // Create the limitOrder obj
+            LimitOrder limitOrder = new LimitOrder(type, size, price);
+
+            // add limitOrder to orderBook (also check type)
+            orderBook.addLimitOrder(limitOrder);
+
+            switch (type) {
+                case "ask":
+                    updateJson(orderBook.getAskMap(), "AskMap.json");
+                    break;
+                case "bid":
+                    updateJson(orderBook.getBidMap(), "BidMap.json");
+                    break;
+                default:
+                    out.writeInt(-1);
+                    throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+            }
+
+            properties.setNextId(LimitOrder.getNextId());
+
+            out.writeInt(limitOrder.getId());
+            
+        } catch (IOException e) {
+            System.err.println("Error during insertLimitOrder: " + e.getMessage());
+            try {
+                out.writeInt(-1);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+            e.printStackTrace();
+        }
     }
 
     private void handleregister() {
@@ -119,17 +178,21 @@ public class ServerThread implements Runnable {
             // get values (username, password) from reg
             RegistrationRequest.Values values = reg.getValues();
 
-            //get the User obj
+            // get the User obj
             User user = values.getUser();
 
-            // Update the map with the received user
             if (usersMap.containsKey(user.getUsername())){
                 responseStatus = new ResponseStatus(102, reg);
             }
             else {
                 usersMap.put(user.getUsername(), user);
-                updateUserslogJson(user);
+
+                usersLogMap = loadMapFromJson("usersLogMap.json");
+                usersLogMap.put(user.getUsername(), user);
+                updateJson(usersLogMap, "usersLogMap.json");
+
                 System.out.println("User registered successfully");
+
                 responseStatus = new ResponseStatus(100, reg);
             }
         } catch (IOException e) {
@@ -178,7 +241,7 @@ public class ServerThread implements Runnable {
                 else responseStatus = new ResponseStatus(101, login);
             }
         } catch (IOException e) {
-            System.err.println("Error during register: " + e.getMessage());
+            System.err.println("Error during login: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -231,7 +294,11 @@ public class ServerThread implements Runnable {
 
                     // replace the old user in the hashMap with the updated user
                     usersMap.put(username, new_user);
-                    updateUserslogJson(new_user);
+
+                    // carico la mappa di log, aggiungo il nuovo user e poi faccio l'update del json
+                    usersLogMap = loadMapFromJson("usersLogMap.json");
+                    usersLogMap.put(username, new_user);
+                    updateJson(usersLogMap, "usersLogMap.json");
                     
                     responseStatus = new ResponseStatus(100, update);
                 }
@@ -245,7 +312,7 @@ public class ServerThread implements Runnable {
                 responseStatus = new ResponseStatus(102, update);
             }
         } catch (IOException e) {
-            System.err.println("Error during register: " + e.getMessage());
+            System.err.println("Error during updateCredentials: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -280,7 +347,7 @@ public class ServerThread implements Runnable {
                 responseStatus = new ResponseStatus(101, logout);
             }
         } catch (IOException e) {
-            System.err.println("Error during register: " + e.getMessage());
+            System.err.println("Error during logout: " + e.getMessage());
             e.printStackTrace();
         }
     }

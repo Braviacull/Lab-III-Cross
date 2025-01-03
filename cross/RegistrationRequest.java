@@ -26,19 +26,3 @@ public class RegistrationRequest extends Request {
         return values;
     }
 }
-
-//    public void setValues(Values values) {
-//        this.values = values;
-//    }
-//
-//        public void setUsername(String username) {
-//            this.username = username;
-//        }
-//
-//        public String getPassword() {
-//            return password;
-//        }
-//
-//        public void setPassword(String password) {
-//            this.password = password;
-//        }

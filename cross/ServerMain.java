@@ -23,6 +23,7 @@ public class ServerMain {
     private ExecutorService connessioni;
     private ConcurrentHashMap<String, User> usersMap;
     private ConcurrentHashMap<String, User> usersLogMap;
+    private OrderBook orderBook;
 
     public ServerMain() {
         try {
@@ -35,6 +36,11 @@ public class ServerMain {
             usersLogMap = loadMapFromJson("usersLogMap.json");
             usersMap = loadMapFromJson("usersMap.json");
             usersMap = updateMap(usersLogMap, usersMap);
+
+            orderBook = new OrderBook(gson);
+
+            int nextID = properties.getNextId();
+            Order.setNextID(nextID);
             
             // Scrivi una hashmap vuota in usersLogMap.json
             try (FileWriter writer = new FileWriter("usersLogMap.json")) {
@@ -71,7 +77,7 @@ public class ServerMain {
         } catch (FileNotFoundException e) {
             // File not found, will create a new file
             try (FileWriter writer = new FileWriter(name)) {
-                gson.toJson(usersMap, writer);
+                gson.toJson(Map, writer);
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -87,7 +93,7 @@ public class ServerMain {
         try {
             while (true) {
                 Socket clientSocket = server.accept();
-                connessioni.execute(new ServerThread(clientSocket, properties.getStopString(), usersMap, gson));
+                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, orderBook , gson));
             }
         }
         catch (Exception e) {

@@ -33,53 +33,66 @@ public class ClientMain {
             username = "";
             loggedIn = false;
 
-            writeMessages();
+            sendRequests();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void receiveIdOrder () {
+        try {
+            int id = in.readInt();
+            System.out.println("order " + id + " submitted");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     private void checkResponse (String line, String username) {
-            try {
-                String response = in.readUTF();
-                ResponseStatus responseStatus = gson.fromJson(response, ResponseStatus.class);
+        try {
+            String response = in.readUTF();
+            ResponseStatus responseStatus = gson.fromJson(response, ResponseStatus.class);
 
-                int responseCode = responseStatus.getResponseCode();
-                String errorMessage = responseStatus.getErrorMessage();
+            int responseCode = responseStatus.getResponseCode();
+            String errorMessage = responseStatus.getErrorMessage();
 
-                // Print response received from server
-                if (!line.equals(properties.getStopString())){
-                    System.out.println(responseCode + " - " + errorMessage);
-                }
-
-                if (responseCode == 100){
-                    switch (line) {
-                        case "login":
-                            this.username = username;
-                            loggedIn = true;
-                            break;
-                        case "logout":
-                            this.username = "";
-                            loggedIn = false;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+            // Print response received from server
+            if (!line.equals(properties.getStopString())){
+                System.out.println(responseCode + " - " + errorMessage);
             }
+
+            if (responseCode == 100){
+                switch (line) {
+                    case "login":
+                        this.username = username;
+                        loggedIn = true;
+                        break;
+                    case "logout":
+                        this.username = "";
+                        loggedIn = false;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void writeMessages() throws IOException {
+    private void sendRequests() throws IOException {
         System.out.println("Type " + properties.getStopString()+ " to stop");
+
         String line = "";
         String username = "";
         String password = "";
         String old_password = "";
         String new_password = "";
-        while(!line.equals(properties.getStopString())){
+        String type = "";
+        String size = "";
+        String price = "";
 
+        while(!line.equals(properties.getStopString())){
             // Manage cases
             if (!loggedIn) {
                 System.out.println("Azioni possibili: (##, register, updateCredentials, login)");
@@ -120,7 +133,7 @@ public class ClientMain {
                 }
             }
             else if (loggedIn) {
-                System.out.println("Azioni possibili: (##, logout)");
+                System.out.println("Azioni possibili: (##, logout, insertLimitOrder)");
 
                 line = scanner.nextLine();
 
@@ -130,8 +143,33 @@ public class ClientMain {
                         logout(this.username);
                         checkResponse(line, username);
                         break;
+                    case "insertLimitOrder":
+                        out.writeUTF(line);
+                        while (true) {
+                            type = scanField("type");
+                            if (type.equals("ask") || type.equals("bid"))
+                                break;
+                            else System.out.println("type must be 'ask' or 'bid'");
+                        }
+                        while (true) {
+                            size = scanField("size");
+                            price = scanField("price");
+                            if (isInt(size) && isInt(price))
+                                break;
+                            else System.out.println("size and price must be integers");
+                        }
+                        int sizeInt = Integer.parseInt(size);
+                        int priceInt = Integer.parseInt(price);
+                        insertLimitOrder(type, sizeInt, priceInt);
+                        receiveIdOrder();
+                        break;
                     default:
-                        System.out.println("Azione non riconosciuta");
+                        if (!line.equals(properties.getStopString())){
+                            System.out.println("Azione non riconosciuta");
+                        }
+                        else {
+                            out.writeUTF(line);
+                        }
                         break;
                 }
             }
@@ -168,6 +206,18 @@ public class ClientMain {
         return res;
     }
 
+    private boolean isInt(String str) {
+        if (str == null || str.isEmpty()) {
+            return false;
+        }
+        try {
+            Integer.parseInt(str);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        return true;
+    }
+
     private void register (String username, String password) {    
         RegistrationRequest reg = RequestFactory.createRegistrationRequest(username, password);
         String jsonReg = gson.toJson(reg);
@@ -198,6 +248,13 @@ public class ClientMain {
 
         // logout.Values is an empty obj so we need to send username separately
         sendString(username);
+    }
+
+    private void insertLimitOrder (String type, int size, int price) {
+        InsertLimitOrderRequest insertLimitOrderRequest = RequestFactory.createInsertLimitOrderRequest(type, size, price);
+        String json = gson.toJson(insertLimitOrderRequest);
+
+        sendString(json);
     }
 
     public static void main(String[] args) {

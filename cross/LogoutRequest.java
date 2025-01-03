@@ -9,7 +9,6 @@ public class LogoutRequest extends Request {
     }
 
     public static class Values {
-        private String username;
 
         public Values() {
             //empty obj

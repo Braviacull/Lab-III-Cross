@@ -21,4 +21,9 @@ public class RequestFactory {
         LogoutRequest.Values values = new LogoutRequest.Values();
         return new LogoutRequest("logout", values);
     }
+
+    public static InsertLimitOrderRequest createInsertLimitOrderRequest(String type, int size, int price) {
+        InsertLimitOrderRequest.Values values = new InsertLimitOrderRequest.Values(type, size, price);
+        return new InsertLimitOrderRequest ("insertLimitOrder", values);
+    }
 }

@@ -1,0 +1,22 @@
+{
+  "1": [
+    {
+      "price": 1,
+      "id": 4,
+      "type": "ask",
+      "size": 1
+    },
+    {
+      "price": 1,
+      "id": 5,
+      "type": "ask",
+      "size": 1
+    },
+    {
+      "price": 1,
+      "id": 6,
+      "type": "ask",
+      "size": 1
+    }
+  ]
+}
