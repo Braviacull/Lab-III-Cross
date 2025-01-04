@@ -93,7 +93,6 @@ public class ClientMain {
         String price = "";
 
         while(!line.equals(properties.getStopString())){
-            // Manage cases
             if (!loggedIn) {
                 System.out.println("Azioni possibili: (##, register, updateCredentials, login)");
 

@@ -22,7 +22,7 @@ public class ServerThread implements Runnable {
     private Gson gson;
     private ResponseStatus responseStatus;
     private ConcurrentHashMap<String, User> usersMap;
-    private ConcurrentHashMap<String, User> usersLogMap;
+    private ConcurrentHashMap<String, User> usersMapLog;
     private String username;
     private Boolean loggedIn;
     private OrderBook orderBook;
@@ -33,7 +33,7 @@ public class ServerThread implements Runnable {
         this.stopString = properties.getStopString();
         this.gson = gson;
         this.usersMap = usersMap;
-        this.usersLogMap = new ConcurrentHashMap<String, User>();
+        this.usersMapLog = new ConcurrentHashMap<String, User>();
         username = "";
         loggedIn = false;
         this.orderBook = orderBook;
@@ -132,15 +132,16 @@ public class ServerThread implements Runnable {
             // Create the limitOrder obj
             LimitOrder limitOrder = new LimitOrder(type, size, price);
 
-            // add limitOrder to orderBook (also check type)
-            orderBook.addLimitOrder(limitOrder);
-
             switch (type) {
                 case "ask":
-                    updateJson(orderBook.getAskMap(), "AskMap.json");
+                    orderBook.addLimitOrder(limitOrder, orderBook.getAskMap());
+                    orderBook.addLimitOrder(limitOrder, orderBook.getAskMapLog());
+                    updateJson(orderBook.getAskMapLog(), "askMapLog.json");
                     break;
                 case "bid":
-                    updateJson(orderBook.getBidMap(), "BidMap.json");
+                    orderBook.addLimitOrder(limitOrder, orderBook.getBidMap());
+                    orderBook.addLimitOrder(limitOrder, orderBook.getBidMapLog());
+                    updateJson(orderBook.getBidMapLog(), "bidMapLog.json");
                     break;
                 default:
                     out.writeInt(-1);
@@ -187,9 +188,9 @@ public class ServerThread implements Runnable {
             else {
                 usersMap.put(user.getUsername(), user);
 
-                usersLogMap = loadMapFromJson("usersLogMap.json");
-                usersLogMap.put(user.getUsername(), user);
-                updateJson(usersLogMap, "usersLogMap.json");
+                usersMapLog = loadMapFromJson("usersMapLog.json");
+                usersMapLog.put(user.getUsername(), user);
+                updateJson(usersMapLog, "usersMapLog.json");
 
                 System.out.println("User registered successfully");
 
@@ -296,9 +297,9 @@ public class ServerThread implements Runnable {
                     usersMap.put(username, new_user);
 
                     // carico la mappa di log, aggiungo il nuovo user e poi faccio l'update del json
-                    usersLogMap = loadMapFromJson("usersLogMap.json");
-                    usersLogMap.put(username, new_user);
-                    updateJson(usersLogMap, "usersLogMap.json");
+                    usersMapLog = loadMapFromJson("usersMapLog.json");
+                    usersMapLog.put(username, new_user);
+                    updateJson(usersMapLog, "usersMapLog.json");
                     
                     responseStatus = new ResponseStatus(100, update);
                 }
