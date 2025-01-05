@@ -42,7 +42,12 @@ public class ClientMain {
     private void receiveIdOrder () {
         try {
             int id = in.readInt();
-            System.out.println("order " + id + " submitted");
+            if (id == -1){
+                System.out.println("Order aborted");
+            }
+            else {
+                System.out.println("order " + id + " submitted");
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -132,7 +137,7 @@ public class ClientMain {
                 }
             }
             else if (loggedIn) {
-                System.out.println("Azioni possibili: (##, logout, insertLimitOrder)");
+                System.out.println("Azioni possibili: (##, logout, insertLimitOrder, insertMarketOrder)");
 
                 line = scanner.nextLine();
 
@@ -144,22 +149,17 @@ public class ClientMain {
                         break;
                     case "insertLimitOrder":
                         out.writeUTF(line);
-                        while (true) {
-                            type = scanField("type");
-                            if (type.equals("ask") || type.equals("bid"))
-                                break;
-                            else System.out.println("type must be 'ask' or 'bid'");
-                        }
-                        while (true) {
-                            size = scanField("size");
-                            price = scanField("price");
-                            if (isInt(size) && isInt(price))
-                                break;
-                            else System.out.println("size and price must be integers");
-                        }
-                        int sizeInt = Integer.parseInt(size);
-                        int priceInt = Integer.parseInt(price);
-                        insertLimitOrder(type, sizeInt, priceInt);
+                        type = scanFieldType(type);
+                        size = scanFieldInt(size, "size");
+                        price = scanFieldInt(price, "price");
+                        insertLimitOrder(type, Integer.parseInt(size), Integer.parseInt(price));
+                        receiveIdOrder();
+                        break;
+                    case "insertMarketOrder":
+                        out.writeUTF(line);
+                        type = scanFieldType(type);
+                        size = scanFieldInt(size, "size");
+                        insertMarketOrder(type, Integer.parseInt(size));
                         receiveIdOrder();
                         break;
                     default:
@@ -203,6 +203,26 @@ public class ClientMain {
             else break;
         }
         return res;
+    }
+
+    private String scanFieldType (String type) {
+        while (true) {
+            type = scanField("type");
+            if (type.equals("ask") || type.equals("bid"))
+                break;
+            else System.out.println("type must be 'ask' or 'bid'");
+        }
+        return type;
+    }
+
+    public String scanFieldInt (String strInt, String str) {
+        while (true) {
+            strInt = scanField(str);
+            if (isInt(strInt))
+                break;
+            else System.out.println("size and price must be integers");
+        }
+        return strInt;
     }
 
     private boolean isInt(String str) {
@@ -252,6 +272,13 @@ public class ClientMain {
     private void insertLimitOrder (String type, int size, int price) {
         InsertLimitOrderRequest insertLimitOrderRequest = RequestFactory.createInsertLimitOrderRequest(type, size, price);
         String json = gson.toJson(insertLimitOrderRequest);
+
+        sendString(json);
+    }
+
+    private void insertMarketOrder(String type, int size) {
+        InsertMarketOrderRequest insertMarketOrderRequest = RequestFactory.createInsertMarketOrderRequest(type, size);
+        String json = gson.toJson(insertMarketOrderRequest);
 
         sendString(json);
     }

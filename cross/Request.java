@@ -19,6 +19,8 @@ public class Request {
                 break;
             case "insertLimitOrder":
                 break;
+            case "insertMarketOrder":
+                break;
             default:
                 throw new IllegalArgumentException(operation + "not supported");
         }

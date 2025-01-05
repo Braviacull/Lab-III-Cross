@@ -10,13 +10,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
-
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 
 public class ServerMain {
     private MyProperties properties;
@@ -24,7 +20,7 @@ public class ServerMain {
     private ServerSocket server;
     private ExecutorService connessioni;
     private ConcurrentHashMap<String, User> usersMap;
-    private ConcurrentHashMap<String, User> usersMapLog;
+    private ConcurrentHashMap<String, User> usersMapTemp;
     private OrderBook orderBook;
 
     public ServerMain() {
@@ -32,12 +28,12 @@ public class ServerMain {
             properties = new MyProperties("server.properties");
             gson = new GsonBuilder().setPrettyPrinting().create();
 
-            usersMapLog = new ConcurrentHashMap<String, User>();
+            usersMapTemp = new ConcurrentHashMap<String, User>();
             usersMap = new ConcurrentHashMap<String, User>();
 
-            usersMapLog = loadMapFromJson("usersMapLog.json");
+            usersMapTemp = loadMapFromJson("usersMapTemp.json");
             usersMap = loadMapFromJson("usersMap.json");
-            usersMap = updateMap(usersMapLog, usersMap); // also empty the logjson
+            usersMap = updateMap(usersMapTemp, usersMap); // also empty the logjson
 
             orderBook = new OrderBook(gson);  // we need to update mapJsons first
 
@@ -52,8 +48,8 @@ public class ServerMain {
         }
     }
 
-    private ConcurrentHashMap<String, User> updateMap(ConcurrentHashMap<String, User> usersMapLog, ConcurrentHashMap<String, User> usersMap) {
-        for (User user : usersMapLog.values()) {
+    private ConcurrentHashMap<String, User> updateMap(ConcurrentHashMap<String, User> usersMapTemp, ConcurrentHashMap<String, User> usersMap) {
+        for (User user : usersMapTemp.values()) {
             usersMap.put(user.getUsername(), user);
         }
         try (FileWriter writer = new FileWriter("usersMap.json")) {
@@ -61,8 +57,8 @@ public class ServerMain {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        // Scrivi una hashmap vuota in usersMapLog.json
-        try (FileWriter writer = new FileWriter("usersMapLog.json")) {
+        // Scrivi una hashmap vuota in usersMapTemp.json
+        try (FileWriter writer = new FileWriter("usersMapTemp.json")) {
             gson.toJson(new ConcurrentHashMap<String, User>(), writer);
         } catch (IOException e) {
             e.printStackTrace();

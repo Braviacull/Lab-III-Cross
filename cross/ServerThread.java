@@ -3,6 +3,8 @@ package cross;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.lang.reflect.Type;
 import java.io.DataInputStream;
@@ -12,6 +14,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 public class ServerThread implements Runnable {
     private final Socket clientSocket;
@@ -22,18 +25,19 @@ public class ServerThread implements Runnable {
     private Gson gson;
     private ResponseStatus responseStatus;
     private ConcurrentHashMap<String, User> usersMap;
-    private ConcurrentHashMap<String, User> usersMapLog;
+    private ConcurrentHashMap<String, User> usersMapTemp;
     private String username;
     private Boolean loggedIn;
     private OrderBook orderBook;
 
     public ServerThread(Socket socket, MyProperties properties, ConcurrentHashMap<String, User> usersMap, OrderBook orderBook, Gson gson) {
+
         clientSocket = socket;
         this.properties = properties; 
         this.stopString = properties.getStopString();
         this.gson = gson;
         this.usersMap = usersMap;
-        this.usersMapLog = new ConcurrentHashMap<String, User>();
+        this.usersMapTemp = new ConcurrentHashMap<String, User>();
         username = "";
         loggedIn = false;
         this.orderBook = orderBook;
@@ -77,6 +81,9 @@ public class ServerThread implements Runnable {
                     case "insertLimitOrder":
                         handleInsertLimitOrder();
                         break;
+                    case "insertMarketOrder":
+                        handleInsertMarketOrder();
+                        break;
                     default:
                         System.out.println("Client disconnected");
                         break;
@@ -109,6 +116,131 @@ public class ServerThread implements Runnable {
         return Map;
     }
 
+    private void handleInsertMarketOrder() {
+        // receive JSON from the ClientMain
+        String json = "";
+        try {
+            json = in.readUTF();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // deserialize the json
+        InsertMarketOrderRequest insertMO = gson.fromJson(json, InsertMarketOrderRequest.class);
+
+        // Check if the operation is the expected one
+        if (!insertMO.getOperation().equals("insertMarketOrder")) {
+            throw new IllegalArgumentException("Operazione non valida: " + insertMO.getOperation());
+        }
+
+        // get values (type, size)
+        InsertMarketOrderRequest.Values values = insertMO.getValues();
+
+        String type = values.getType();
+        int size = values.getSize();
+
+        exchangeMatching(size, type);
+    }
+
+    private void exchangeMatching(int size, String type) {
+        try {
+            if (!type.equals("ask") && !type.equals("bid")) {
+                throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+            }
+
+            ConcurrentSkipListMap<Integer, List<LimitOrder>> map = type.equals("ask") ? orderBook.getBidMap() : orderBook.getAskMap();
+            if (map.isEmpty()){
+                out.writeInt(-1);
+                return;
+            }
+
+            Integer price = type.equals("ask") ? map.lastKey() : map.firstKey();
+            while (size > 0 && price != null) { // scorro la mappa di liste di ordini
+                List<LimitOrder> list = map.get(price);
+                System.out.println("Processing price: " + price + ", list size: " + (list != null ? list.size() : "null"));
+                Iterator<LimitOrder> iterator = list.iterator();
+                while (iterator.hasNext() && size > 0) {
+                    LimitOrder limitOrder = iterator.next(); // scorro la lista con price più alto (priorità)
+                    System.out.println("Processing limit order: " + limitOrder.getId() + ", size: " + limitOrder.getSize());
+                    if (size >= limitOrder.getSize()) {
+                        size -= limitOrder.getSize();
+                        iterator.remove();
+                        System.out.println("Removed limit order: " + limitOrder.getId());
+                    } else {
+                        int newSize = limitOrder.getSize() - size;
+                        System.out.println("Updated limit order " + limitOrder.getId() + " old size: " + limitOrder.getSize() + " new size: " + newSize);
+                        limitOrder.setSize(newSize);
+                        size = 0;
+                    }
+    
+                    if (list.isEmpty()) { // se esco dal for perché la lista é vuota, la elimino
+                        map.remove(price);
+                        System.out.println("Removed empty list for price: " + price);
+                    }
+    
+                    if (size == 0) { // se esco dal for perché size == 0, la lista non é vuota, allora la lascio
+                        System.out.println("TRANSAZIONE ESEGUITA CORRETTAMENTE");
+                        break;
+                    }
+    
+                    // non dovrebbe succedere
+                    if (size < 0) {
+                        out.writeInt(-1);
+                        throw new IllegalArgumentException("Size cannot be negative: " + size);
+                    }
+                }
+                price = type.equals("ask") ? map.lowerKey(price) : map.higherKey(price);
+                System.out.println("Next price: " + price);
+            }
+            if (size > 0) { // ordine parzialmente evaso: NON deve avere effetto
+                System.out.println("size > 0");
+                // Annullo le modifiche sulla map
+                switch (type) {
+                    case "ask":
+                        map = orderBook.loadMapFromJson("bidMap.json", gson);
+                        orderBook.setBidMap(map);
+                        break;
+                    case "bid":
+                        map = orderBook.loadMapFromJson("askMap.json", gson);
+                        orderBook.setAskMap(map);
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Size cannot be negative: " + size);
+                }
+                out.writeInt(-1);
+            }
+            if (size == 0) { // ordine completamente evaso: DEVE avere effetto
+                System.out.println("size == 0");
+
+                // aggiorna il json della mappa e resetta la mappa di log dopo l'aggiornamento
+                switch (type) {
+                    case "ask":
+                        orderBook.emptyBidTempANDUpdate();
+                        break;
+                    case "bid":
+                        orderBook.emptyAskTempANDUpdate();
+                        break;
+                    default:
+                        out.writeInt(-1);
+                        throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+                }
+    
+                // mando l'id dell'ordine appena evaso al client
+                MarketOrder marketOrder = new MarketOrder(type, size);
+                properties.setNextId(Order.getNextId());
+                out.writeInt(marketOrder.getId());
+            }
+        } catch (IOException e) {
+            System.err.println("Error during insertMarketOrder: " + e.getMessage());
+            try {
+                out.writeInt(-1);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+            e.printStackTrace();
+        }
+    }
+
     private void handleInsertLimitOrder () {
         try {
             // receive JSON from the ClientMain
@@ -132,23 +264,27 @@ public class ServerThread implements Runnable {
             // Create the limitOrder obj
             LimitOrder limitOrder = new LimitOrder(type, size, price);
 
+            ConcurrentSkipListMap<Integer, List<LimitOrder>> MapTemp;
+
             switch (type) {
                 case "ask":
                     orderBook.addLimitOrder(limitOrder, orderBook.getAskMap());
-                    orderBook.addLimitOrder(limitOrder, orderBook.getAskMapLog());
-                    updateJson(orderBook.getAskMapLog(), "askMapLog.json");
+                    MapTemp = orderBook.loadMapFromJson("askMapTemp.json", gson);
+                    orderBook.addLimitOrder(limitOrder, MapTemp);
+                    updateJson(MapTemp, "askMapTemp.json");
                     break;
                 case "bid":
                     orderBook.addLimitOrder(limitOrder, orderBook.getBidMap());
-                    orderBook.addLimitOrder(limitOrder, orderBook.getBidMapLog());
-                    updateJson(orderBook.getBidMapLog(), "bidMapLog.json");
+                    MapTemp = orderBook.loadMapFromJson("bidMapTemp.json", gson);
+                    orderBook.addLimitOrder(limitOrder, MapTemp);
+                    updateJson(MapTemp, "bidMapTemp.json");
                     break;
                 default:
                     out.writeInt(-1);
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
 
-            properties.setNextId(LimitOrder.getNextId());
+            properties.setNextId(Order.getNextId());
 
             out.writeInt(limitOrder.getId());
             
@@ -188,9 +324,9 @@ public class ServerThread implements Runnable {
             else {
                 usersMap.put(user.getUsername(), user);
 
-                usersMapLog = loadMapFromJson("usersMapLog.json");
-                usersMapLog.put(user.getUsername(), user);
-                updateJson(usersMapLog, "usersMapLog.json");
+                usersMapTemp = loadMapFromJson("usersMapTemp.json");
+                usersMapTemp.put(user.getUsername(), user);
+                updateJson(usersMapTemp, "usersMapTemp.json");
 
                 System.out.println("User registered successfully");
 
@@ -297,9 +433,9 @@ public class ServerThread implements Runnable {
                     usersMap.put(username, new_user);
 
                     // carico la mappa di log, aggiungo il nuovo user e poi faccio l'update del json
-                    usersMapLog = loadMapFromJson("usersMapLog.json");
-                    usersMapLog.put(username, new_user);
-                    updateJson(usersMapLog, "usersMapLog.json");
+                    usersMapTemp = loadMapFromJson("usersMapTemp.json");
+                    usersMapTemp.put(username, new_user);
+                    updateJson(usersMapTemp, "usersMapTemp.json");
                     
                     responseStatus = new ResponseStatus(100, update);
                 }

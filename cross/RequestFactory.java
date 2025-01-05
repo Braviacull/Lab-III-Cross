@@ -26,4 +26,9 @@ public class RequestFactory {
         InsertLimitOrderRequest.Values values = new InsertLimitOrderRequest.Values(type, size, price);
         return new InsertLimitOrderRequest ("insertLimitOrder", values);
     }
+
+    public static InsertMarketOrderRequest createInsertMarketOrderRequest(String type, int size) {
+        InsertMarketOrderRequest.Values values = new InsertMarketOrderRequest.Values(type, size);
+        return new InsertMarketOrderRequest ("insertMarketOrder", values);
+    }
 }

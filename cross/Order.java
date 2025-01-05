@@ -5,12 +5,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Order {
     private static AtomicInteger nextID = new AtomicInteger(1); // reinizialised in ServerMain constructor
     
-    private final int id;
+    private final int orderId;
     private String type; // ask/bid
     private int size;
 
     public Order(String type, int size) {
-        this.id = Order.nextID.getAndIncrement();
+        this.orderId = Order.nextID.getAndIncrement();
         setType(type);
         this.size = size;
     }
@@ -36,13 +36,17 @@ public class Order {
     }
 
     public int getId () {
-        return id;
+        return orderId;
     }
 
     public String getType () {
         return type;
     }
 
+    public void setSize (int newSize) {
+        this.size = newSize;
+    }
+    
     public int getSize () {
         return size;
     }
