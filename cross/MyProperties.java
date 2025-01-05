@@ -19,12 +19,12 @@ public class MyProperties {
         try (FileInputStream fis = new FileInputStream(fileName)) {
             properties.load(fis);
             
-            serverIP = properties.getProperty("server.ip");
-            port = Integer.parseInt(properties.getProperty("server.port"));
-            stopString = properties.getProperty("server.stop_string");
+            serverIP = properties.getProperty(Costants.SERVER_IP);
+            port = Integer.parseInt(properties.getProperty(Costants.SERVER_PORT));
+            stopString = properties.getProperty(Costants.SERVER_STOP_STRING);
 
-            if (properties.getProperty("server.next_id") != null) {
-                next_id = Integer.parseInt(properties.getProperty("server.next_id"));
+            if (properties.getProperty(Costants.SERVER_NEXT_ID) != null) {
+                next_id = Integer.parseInt(properties.getProperty(Costants.SERVER_NEXT_ID));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -33,7 +33,7 @@ public class MyProperties {
 
     public void setNextId(int next_id) {
         this.next_id = next_id;
-        properties.setProperty("server.next_id", Integer.toString(next_id));
+        properties.setProperty(Costants.SERVER_NEXT_ID, Integer.toString(next_id));
         try (FileOutputStream out = new FileOutputStream(propertiesFilePath)) {
             properties.store(out, null);
         } catch (IOException e) {

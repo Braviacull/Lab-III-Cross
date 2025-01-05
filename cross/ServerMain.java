@@ -15,6 +15,7 @@ import com.google.gson.reflect.TypeToken;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerMain {
+
     private MyProperties properties;
     private Gson gson;
     private ServerSocket server;
@@ -25,84 +26,79 @@ public class ServerMain {
 
     public ServerMain() {
         try {
-            properties = new MyProperties("server.properties");
-            gson = new GsonBuilder().setPrettyPrinting().create();
-
-            usersMapTemp = new ConcurrentHashMap<String, User>();
-            usersMap = new ConcurrentHashMap<String, User>();
-
-            usersMapTemp = loadMapFromJson("usersMapTemp.json");
-            usersMap = loadMapFromJson("usersMap.json");
-            usersMap = updateMap(usersMapTemp, usersMap); // also empty the logjson
-
-            orderBook = new OrderBook(gson);  // we need to update mapJsons first
-
-            int nextID = properties.getNextId();
-            Order.setNextID(nextID);
-            
-            server = new ServerSocket(properties.getPort(), 50, InetAddress.getByName(properties.getServerIP()));
-            
-            acceptConnections();
+            initializeServer(); // Initialize server configurations and resources
+            acceptConnections(); // Start accepting client connections
         } catch (IOException e) {
+            System.err.println("Error initializing server: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private void initializeServer() throws IOException {
+        properties = new MyProperties(Costants.SERVER_PROPERTIES_FILE); // Load server properties
+        gson = new GsonBuilder().setPrettyPrinting().create(); // Initialize Gson for JSON operations
+
+        usersMapTemp = loadMapFromJson(Costants.USERS_MAP_TEMP_FILE); // Load temporary user map from JSON
+        usersMap = loadMapFromJson(Costants.USERS_MAP_FILE); // Load main user map from JSON
+        usersMap = updateMap(usersMapTemp, usersMap); // Update main user map with temporary user map
+
+        updateJson(usersMap, Costants.USERS_MAP_FILE); // Save updated user map to JSON
+        updateJson(new ConcurrentHashMap<>(), Costants.USERS_MAP_TEMP_FILE); // Clear temporary user map
+
+        orderBook = new OrderBook(gson); // Initialize order book
+
+        int nextID = properties.getNextId(); // Get next order ID from properties
+        Order.setNextID(nextID); // Set next order ID
+
+        server = new ServerSocket(properties.getPort(), 50, InetAddress.getByName(properties.getServerIP())); // Initialize server socket
     }
 
     private ConcurrentHashMap<String, User> updateMap(ConcurrentHashMap<String, User> usersMapTemp, ConcurrentHashMap<String, User> usersMap) {
         for (User user : usersMapTemp.values()) {
-            usersMap.put(user.getUsername(), user);
-        }
-        try (FileWriter writer = new FileWriter("usersMap.json")) {
-            gson.toJson(usersMap, writer);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        // Scrivi una hashmap vuota in usersMapTemp.json
-        try (FileWriter writer = new FileWriter("usersMapTemp.json")) {
-            gson.toJson(new ConcurrentHashMap<String, User>(), writer);
-        } catch (IOException e) {
-            e.printStackTrace();
+            usersMap.put(user.getUsername(), user); // Update main user map with users from temporary map
         }
         return usersMap;
     }
-    
-    private ConcurrentHashMap<String, User> loadMapFromJson(String name) {
-        ConcurrentHashMap<String, User> Map = new ConcurrentHashMap<String, User>();
-        try (FileReader reader = new FileReader(name)) {
-            Type userMapType = new TypeToken<ConcurrentHashMap<String, User>>(){}.getType();
-            Map = gson.fromJson(reader, userMapType);
-        } catch (FileNotFoundException e) {
-            // File not found, will create a new file
-            try (FileWriter writer = new FileWriter(name)) {
-                gson.toJson(Map, writer);
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
+
+    private void updateJson(ConcurrentHashMap<String, User> map, String filename) {
+        try (FileWriter writer = new FileWriter(filename)) {
+            gson.toJson(map, writer); // Save user map to JSON file
         } catch (IOException e) {
+            System.err.println("Error updating map to " + filename + ": " + e.getMessage());
             e.printStackTrace();
         }
-        return Map;
     }
 
-    private void acceptConnections() throws IOException {
+    private ConcurrentHashMap<String, User> loadMapFromJson(String filename) {
+        ConcurrentHashMap<String, User> map = new ConcurrentHashMap<>();
+        try (FileReader reader = new FileReader(filename)) {
+            Type userMapType = new TypeToken<ConcurrentHashMap<String, User>>(){}.getType();
+            map = gson.fromJson(reader, userMapType); // Load user map from JSON file
+        } catch (FileNotFoundException e) {
+            System.out.println(filename + " not found, creating a new file.");
+            updateJson(map, filename); // Create new JSON file if not found
+        } catch (IOException e) {
+            System.err.println("Error loading map from " + filename + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+        return map;
+    }
+
+    private void acceptConnections() {
         System.out.println("ServerMain started");
-        connessioni = Executors.newCachedThreadPool();
+        connessioni = Executors.newCachedThreadPool(); // Initialize thread pool for handling connections
         try {
             while (true) {
-                Socket clientSocket = server.accept();
-                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, orderBook , gson));
+                Socket clientSocket = server.accept(); // Accept client connection
+                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, orderBook, gson)); // Handle client connection in a new thread
             }
-        }
-        catch (Exception e) {
+        } catch (IOException e) {
+            System.err.println("Error accepting connections: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
     public static void main(String[] args) {
-        try {
-            new ServerMain();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        new ServerMain(); // Start the server
     }
 }

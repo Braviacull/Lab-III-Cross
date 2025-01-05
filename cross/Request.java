@@ -9,17 +9,17 @@ public class Request {
 
     public void setOperation(String operation) {
         switch (operation) {
-            case "register":
+            case Costants.REGISTER:
                 break;
-            case "updateCredentials":
+            case Costants.UPDATE_CREDENTIALS:
                 break;
-            case "login":
+            case Costants.LOGIN:
                 break;
-            case "logout":
+            case Costants.LOGOUT:
                 break;
-            case "insertLimitOrder":
+            case Costants.INSERT_LIMIT_ORDER:
                 break;
-            case "insertMarketOrder":
+            case Costants.INSERT_MARKET_ORDER:
                 break;
             default:
                 throw new IllegalArgumentException(operation + "not supported");

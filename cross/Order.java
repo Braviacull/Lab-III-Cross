@@ -17,9 +17,9 @@ public class Order {
 
     public void setType(String type) {
         switch (type) {
-            case "ask":
+            case Costants.ASK:
                 break;
-            case "bid":
+            case Costants.BID:
                 break;
             default:
                 throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
