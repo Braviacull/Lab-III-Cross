@@ -1,10 +1,18 @@
 {
-  "1": [
+  "49000": [
     {
-      "price": 1,
-      "orderId": 94,
+      "price": 49000,
+      "orderId": 108,
       "type": "bid",
-      "size": 1
+      "size": 15000
+    }
+  ],
+  "49999": [
+    {
+      "price": 49999,
+      "orderId": 107,
+      "type": "bid",
+      "size": 5500
     }
   ]
 }

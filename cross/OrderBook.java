@@ -60,18 +60,6 @@ public class OrderBook {
         }
     }
 
-    public void emptyBidTempANDupdate() {
-        // Update bid map JSON file and clear temporary bid map
-        updateJson(bidMap, Costants.BID_MAP_FILE);
-        updateJson(new ConcurrentSkipListMap<>(), Costants.BID_MAP_TEMP_FILE);
-    }
-
-    public void emptyAskTempANDupdate() {
-        // Update ask map JSON file and clear temporary ask map
-        updateJson(askMap, Costants.ASK_MAP_FILE);
-        updateJson(new ConcurrentSkipListMap<>(), Costants.ASK_MAP_TEMP_FILE);
-    }
-
     public ConcurrentSkipListMap<Integer, List<LimitOrder>> loadMapFromJson(String fileName) {
         ConcurrentSkipListMap<Integer, List<LimitOrder>> map = new ConcurrentSkipListMap<>();
         try (FileReader reader = new FileReader(fileName)) {
