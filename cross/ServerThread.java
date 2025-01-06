@@ -330,17 +330,17 @@ public class ServerThread implements Runnable {
 
     private void transaction(int size, String type) {
         try {
-            if (!"ask".equals(type) && !"bid".equals(type)) {
+            if (!Costants.ASK.equals(type) && !Costants.BID.equals(type)) {
                 throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
 
-            ConcurrentSkipListMap<Integer, List<LimitOrder>> map = "ask".equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
+            ConcurrentSkipListMap<Integer, List<LimitOrder>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
             if (map.isEmpty()) {
                 out.writeInt(-1);
                 return;
             }
 
-            Integer price = "ask".equals(type) ? map.lastKey() : map.firstKey();
+            Integer price = Costants.ASK.equals(type) ? map.lastKey() : map.firstKey();
             while (size > 0 && price != null) {
                 List<LimitOrder> list = map.get(price);
                 Iterator<LimitOrder> iterator = list.iterator();
@@ -367,13 +367,13 @@ public class ServerThread implements Runnable {
                         throw new IllegalArgumentException("Size cannot be negative: " + size);
                     }
                 }
-                price = "ask".equals(type) ? map.lowerKey(price) : map.higherKey(price);
+                price = Costants.ASK.equals(type) ? map.lowerKey(price) : map.higherKey(price);
             }
             if (size > 0) {
-                resetOrderBook(type);
+                orderBook.resetOrderBook(type);
                 out.writeInt(-1);
             } else {
-                updateOrderBook(type);
+                orderBook.updateOrderBook(type);
                 MarketOrder marketOrder = new MarketOrder(type, size);
                 properties.setNextId(Order.getNextId());
                 out.writeInt(marketOrder.getId());
@@ -390,54 +390,6 @@ public class ServerThread implements Runnable {
         } catch (IOException e) {
             System.err.println("Error during transaction: " + e.getMessage());
             sendErrorResponse();
-        }
-    }
-
-    private void resetOrderBook(String type) throws IOException {
-        ConcurrentSkipListMap<Integer, List<LimitOrder>> map;
-        ConcurrentSkipListMap<Integer, List<LimitOrder>> mapTemp;
-        switch (type) {
-            case Costants.ASK:
-                // load map and map temp from jsons
-                mapTemp = orderBook.loadMapFromJson(Costants.BID_MAP_TEMP_FILE);
-                map = orderBook.loadMapFromJson(Costants.BID_MAP_FILE);
-                // update main map with mapTemp
-                orderBook.updateMap(mapTemp, map, type);
-                // Set the updated map as the main map
-                orderBook.setBidMap(map);
-                // update jsons
-                orderBook.updateJson(orderBook.getBidMap(), Costants.BID_MAP_FILE);
-                orderBook.updateJson(new ConcurrentSkipListMap<Integer, List<LimitOrder>>(), Costants.BID_MAP_TEMP_FILE);
-                break;
-            case Costants.BID:
-                // load map and map temp from jsons
-                mapTemp = orderBook.loadMapFromJson(Costants.ASK_MAP_TEMP_FILE);
-                map = orderBook.loadMapFromJson(Costants.ASK_MAP_FILE);
-                // update main map with mapTemp
-                orderBook.updateMap(mapTemp, map, type);
-                //Set the updated map as the main map
-                orderBook.setAskMap(map);
-                // update jsons
-                orderBook.updateJson(orderBook.getAskMap(), Costants.ASK_MAP_FILE);
-                orderBook.updateJson(new ConcurrentSkipListMap<Integer, List<LimitOrder>>(), Costants.ASK_MAP_TEMP_FILE);
-                break;
-            default:
-                throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
-        }
-    }
-
-    private void updateOrderBook(String type) throws IOException {
-        switch (type) {
-            case Costants.ASK:
-                orderBook.updateJson(orderBook.getBidMap(), Costants.BID_MAP_FILE);
-                orderBook.updateJson(new ConcurrentSkipListMap<Integer, List<LimitOrder>>(), Costants.BID_MAP_TEMP_FILE);
-                break;
-            case Costants.BID:
-                orderBook.updateJson(orderBook.getAskMap(), Costants.ASK_MAP_FILE);
-                orderBook.updateJson(new ConcurrentSkipListMap<Integer, List<LimitOrder>>(), Costants.ASK_MAP_TEMP_FILE);
-                break;
-            default:
-                throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
         }
     }
 
