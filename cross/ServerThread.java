@@ -262,18 +262,33 @@ public class ServerThread implements Runnable {
             Order limitOrder = new Order(values.getType(), values.getSize(), values.getPrice());
 
             ConcurrentSkipListMap<Integer, List<Order>> mapTemp = new ConcurrentSkipListMap<Integer, List<Order>>();
+            int size = -1;
             switch (values.getType()) {
                 case Costants.ASK:
-                    orderBook.addOrder(limitOrder, orderBook.getAskMap());
-                    orderBook.loadMapFromJson(Costants.ASK_MAP_TEMP_FILE, mapTemp);
-                    orderBook.addOrder(limitOrder, mapTemp);
-                    orderBook.updateJson(Costants.ASK_MAP_TEMP_FILE, mapTemp);
+                    if (values.getPrice() < orderBook.getBidMarketPrice()) {
+                        System.out.println(values.getPrice() + " " + orderBook.getBidMarketPrice());
+                        size = transaction(values.getSize(), values.getType());
+                        checkTransaction(size, values.getType());
+                    }
+                    if (size != 0) { //transazione non provata o non riuscita
+                        orderBook.addOrder(limitOrder, orderBook.getAskMap());
+                        orderBook.loadMapFromJson(Costants.ASK_MAP_TEMP_FILE, mapTemp);
+                        orderBook.addOrder(limitOrder, mapTemp);
+                        orderBook.updateJson(Costants.ASK_MAP_TEMP_FILE, mapTemp);
+                    }
                     break;
                 case Costants.BID:
-                    orderBook.addOrder(limitOrder, orderBook.getBidMap());
-                    orderBook.loadMapFromJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
-                    orderBook.addOrder(limitOrder, mapTemp);
-                    orderBook.updateJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
+                    if (values.getPrice() > orderBook.getAskMarketPrice()) {
+                        System.out.println(values.getPrice() + " " + orderBook.getAskMarketPrice());
+                        size = transaction(values.getSize(), values.getType());
+                        checkTransaction(size, values.getType());
+                    }
+                    if (size != 0) {
+                        orderBook.addOrder(limitOrder, orderBook.getBidMap());
+                        orderBook.loadMapFromJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
+                        orderBook.addOrder(limitOrder, mapTemp);
+                        orderBook.updateJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
+                    }
                     break;
                 default:
                     MyUtils.sendOrderId(-1, out);
@@ -299,7 +314,7 @@ public class ServerThread implements Runnable {
 
             InsertMarketOrderRequest.Values values = insertMO.getValues();
             int size = transaction(values.getSize(), values.getType());
-
+            checkTransaction(size, values.getType());
             sendMarketOrderIdAfterTransaction(size, values.getType());
         } catch (IOException e) {
             System.err.println("Error during insertMarketOrder: " + e.getMessage());
@@ -347,17 +362,21 @@ public class ServerThread implements Runnable {
         return size;
     }
 
-    private void sendMarketOrderIdAfterTransaction (int size, String type) {
+    private void checkTransaction (int size, String type) {
         if (size > 0) {
             orderBook.resetOrderBook(type);
-            MyUtils.sendOrderId(-1, out);
         } else if (size == 0) {
             orderBook.updateOrderBook(type);
+        }
+    }
+
+    private void sendMarketOrderIdAfterTransaction (int size, String type) {
+        if (size > 0) {
+            MyUtils.sendOrderId(-1, out);
+        } else if (size == 0) {
             Order marketOrder = new Order(type, size);
             properties.setNextId(Order.getNextId());
             MyUtils.sendOrderId(marketOrder.getId(), out);
-        } else { // negative size ERROR
-            throw new IllegalArgumentException("Size cannot be negative: " + size);
         }
     }
 

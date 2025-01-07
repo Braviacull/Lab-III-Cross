@@ -1,1 +1,36 @@
-{}
+{
+  "70": [
+    {
+      "orderId": 153,
+      "type": "ask",
+      "size": 3,
+      "price": 70
+    }
+  ],
+  "80": [
+    {
+      "orderId": 151,
+      "type": "ask",
+      "size": 2,
+      "price": 80
+    },
+    {
+      "orderId": 152,
+      "type": "ask",
+      "size": 2,
+      "price": 80
+    },
+    {
+      "orderId": 155,
+      "type": "ask",
+      "size": 1,
+      "price": 80
+    },
+    {
+      "orderId": 156,
+      "type": "ask",
+      "size": 1,
+      "price": 80
+    }
+  ]
+}
