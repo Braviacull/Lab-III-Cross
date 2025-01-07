@@ -1,72 +1,10 @@
 {
-  "1": [
-    {
-      "orderId": 142,
-      "type": "bid",
-      "size": 1,
-      "price": 1
-    }
-  ],
-  "99": [
-    {
-      "orderId": 136,
-      "type": "bid",
-      "size": 10,
-      "price": 99
-    }
-  ],
   "100": [
     {
-      "orderId": 115,
+      "orderId": 148,
       "type": "bid",
-      "size": 99,
+      "size": 5,
       "price": 100
-    },
-    {
-      "orderId": 137,
-      "type": "bid",
-      "size": 11,
-      "price": 100
-    }
-  ],
-  "10000": [
-    {
-      "orderId": 129,
-      "type": "bid",
-      "size": 10000,
-      "price": 10000
-    }
-  ],
-  "10001": [
-    {
-      "orderId": 133,
-      "type": "bid",
-      "size": 100,
-      "price": 10001
-    }
-  ],
-  "49000": [
-    {
-      "orderId": 108,
-      "type": "bid",
-      "size": 15000,
-      "price": 49000
-    }
-  ],
-  "49999": [
-    {
-      "orderId": 107,
-      "type": "bid",
-      "size": 5000,
-      "price": 49999
-    }
-  ],
-  "50000": [
-    {
-      "orderId": 119,
-      "type": "bid",
-      "size": 49,
-      "price": 50000
     }
   ]
 }

@@ -298,68 +298,66 @@ public class ServerThread implements Runnable {
             }
 
             InsertMarketOrderRequest.Values values = insertMO.getValues();
-            transaction(values.getSize(), values.getType());
+            int size = transaction(values.getSize(), values.getType());
+
+            sendMarketOrderIdAfterTransaction(size, values.getType());
         } catch (IOException e) {
             System.err.println("Error during insertMarketOrder: " + e.getMessage());
             MyUtils.sendOrderId(-1, out);
         }
     }
 
-    private void transaction(int size, String type) {
-        try {
-            if (!Costants.ASK.equals(type) && !Costants.BID.equals(type)) {
-                throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
-            }
+    private int transaction(int size, String type) {
+        if (!Costants.ASK.equals(type) && !Costants.BID.equals(type)) {
+            throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+        }
 
-            ConcurrentSkipListMap<Integer, List<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
-            if (map.isEmpty()) {
-                MyUtils.sendOrderId(-1, out);
-                return;
-            }
+        ConcurrentSkipListMap<Integer, List<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
+        if (map.isEmpty()) {
+            return -1;
+        }
 
-            Integer price = Costants.ASK.equals(type) ? orderBook.getBidMarketPrice() : orderBook.getAskMarketPrice(); // get market price
-            while (size > 0 && price != null) {
-                List<Order> list = map.get(price);
-                Iterator<Order> iterator = list.iterator();
-                while (iterator.hasNext() && size > 0) {
-                    Order limitOrder = iterator.next();
-                    if (size >= limitOrder.getSize()) {
-                        size -= limitOrder.getSize();
-                        iterator.remove();
-                    } else {
-                        limitOrder.setSize(limitOrder.getSize() - size);
-                        size = 0;
-                    }
-
-                    if (list.isEmpty()) {
-                        map.remove(price);
-                    }
-
-                    if (size == 0) {
-                        break;
-                    }
-                    else if (size < 0) {
-                        MyUtils.sendOrderId(-1, out);
-                        throw new IllegalArgumentException("Size cannot be negative: " + size);
-                    }
+        Integer price = Costants.ASK.equals(type) ? orderBook.getBidMarketPrice() : orderBook.getAskMarketPrice(); // get market price
+        while (size > 0 && price != null) {
+            List<Order> list = map.get(price);
+            Iterator<Order> iterator = list.iterator();
+            while (iterator.hasNext() && size > 0) {
+                Order limitOrder = iterator.next();
+                if (size >= limitOrder.getSize()) {
+                    size -= limitOrder.getSize();
+                    iterator.remove();
+                } else {
+                    limitOrder.setSize(limitOrder.getSize() - size);
+                    size = 0;
                 }
-                price = Costants.ASK.equals(type) ? map.lowerKey(price) : map.higherKey(price);
+
+                if (list.isEmpty()) {
+                    map.remove(price);
+                }
+
+                if (size == 0) {
+                    break;
+                }
+                else if (size < 0) {
+                    throw new IllegalArgumentException("Size cannot be negative: " + size);
+                }
             }
-            if (size > 0) {
-                orderBook.resetOrderBook(type);
-                MyUtils.sendOrderId(-1, out);
-            } else if (size == 0) {
-                orderBook.updateOrderBook(type);
-                Order marketOrder = new Order(type, size);
-                properties.setNextId(Order.getNextId());
-                MyUtils.sendOrderId(marketOrder.getId(), out);
-            } else { // negative size ERROR
-                MyUtils.sendOrderId(-1, out);
-                throw new IllegalArgumentException("Size cannot be negative: " + size);
-            }
-        } catch (IOException e) {
-            System.err.println("Error during transaction: " + e.getMessage());
+            price = Costants.ASK.equals(type) ? map.lowerKey(price) : map.higherKey(price);
+        }
+        return size;
+    }
+
+    private void sendMarketOrderIdAfterTransaction (int size, String type) {
+        if (size > 0) {
+            orderBook.resetOrderBook(type);
             MyUtils.sendOrderId(-1, out);
+        } else if (size == 0) {
+            orderBook.updateOrderBook(type);
+            Order marketOrder = new Order(type, size);
+            properties.setNextId(Order.getNextId());
+            MyUtils.sendOrderId(marketOrder.getId(), out);
+        } else { // negative size ERROR
+            throw new IllegalArgumentException("Size cannot be negative: " + size);
         }
     }
 

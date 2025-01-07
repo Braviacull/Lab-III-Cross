@@ -83,9 +83,8 @@ public class OrderBook {
         }
     }
 
-
     // Syncronised // NOT FOR STOP ORDERS
-    public void resetOrderBook(String type) throws IOException {
+    public void resetOrderBook(String type){
         ConcurrentSkipListMap<Integer, List<Order>> map = new ConcurrentSkipListMap<Integer, List<Order>>();
         ConcurrentSkipListMap<Integer, List<Order>> mapTemp = new ConcurrentSkipListMap<Integer, List<Order>>();
         switch (type) {
@@ -109,7 +108,7 @@ public class OrderBook {
     }
 
     // Syncronised // NOT FOR STOP ORDERS
-    public void updateOrderBook(String type) throws IOException {
+    public void updateOrderBook(String type){
         switch (type) {
             case Costants.ASK:
                 updateJson(Costants.BID_MAP_FILE, getBidMap());
