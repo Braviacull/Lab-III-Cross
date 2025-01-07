@@ -1,19 +1,14 @@
 package cross;
 
 import com.google.gson.*;
-import com.google.gson.reflect.TypeToken;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.lang.reflect.Type;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.FileWriter;
-import java.io.FileReader;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 public class ServerThread implements Runnable {
@@ -108,27 +103,6 @@ public class ServerThread implements Runnable {
         }
     }
 
-    private synchronized void updateJson(ConcurrentMap<String, User> map, String jsonName) {
-        try (FileWriter writer = new FileWriter(jsonName)) {
-            gson.toJson(map, writer);
-        } catch (IOException e) {
-            System.err.println("Error updating JSON: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private synchronized ConcurrentHashMap<String, User> loadMapFromJson(String name) {
-        ConcurrentHashMap<String, User> map = new ConcurrentHashMap<>();
-        try (FileReader reader = new FileReader(name)) {
-            Type userMapType = new TypeToken<ConcurrentHashMap<String, User>>(){}.getType();
-            map = gson.fromJson(reader, userMapType);
-        } catch (IOException e) {
-            System.err.println("Error loading JSON: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return map;
-    }
-
     private void handleRegister() {
         try {
             String json = in.readUTF();
@@ -147,15 +121,15 @@ public class ServerThread implements Runnable {
                 usersMap.put(user.getUsername(), user);
 
                 // Update usersMapTemp.json
-                usersMapTemp = loadMapFromJson(Costants.USERS_MAP_TEMP_FILE);
+                usersMapTemp = ServerMain.loadMapFromJson(Costants.USERS_MAP_TEMP_FILE);
                 usersMapTemp.put(user.getUsername(), user);
-                updateJson(usersMapTemp, Costants.USERS_MAP_TEMP_FILE);
+                ServerMain.updateJson(usersMapTemp, Costants.USERS_MAP_TEMP_FILE);
 
                 responseStatus = new ResponseStatus(100, reg);
             }
         } catch (IOException e) {
             System.err.println("Error during register: " + e.getMessage());
-            sendErrorResponse();
+            sendOrderId(-1);
         }
     }
 
@@ -190,9 +164,9 @@ public class ServerThread implements Runnable {
                     usersMap.put(username, newUser);
 
                     // Update usersMapTemp.json
-                    usersMapTemp = loadMapFromJson(Costants.USERS_MAP_TEMP_FILE);
+                    usersMapTemp = ServerMain.loadMapFromJson(Costants.USERS_MAP_TEMP_FILE);
                     usersMapTemp.put(username, newUser);
-                    updateJson(usersMapTemp, Costants.USERS_MAP_TEMP_FILE);
+                    ServerMain.updateJson(usersMapTemp, Costants.USERS_MAP_TEMP_FILE);
 
                     responseStatus = new ResponseStatus(100, update);
                 } else {
@@ -203,7 +177,7 @@ public class ServerThread implements Runnable {
             }
         } catch (IOException e) {
             System.err.println("Error during updateCredentials: " + e.getMessage());
-            sendErrorResponse();
+            sendOrderId(-1);
         }
     }
 
@@ -238,7 +212,7 @@ public class ServerThread implements Runnable {
             }
         } catch (IOException e) {
             System.err.println("Error during login: " + e.getMessage());
-            sendErrorResponse();
+            sendOrderId(-1);
         }
     }
 
@@ -266,7 +240,7 @@ public class ServerThread implements Runnable {
             }
         } catch (IOException e) {
             System.err.println("Error during logout: " + e.getMessage());
-            sendErrorResponse();
+            sendOrderId(-1);
         }
     }
 
@@ -299,15 +273,15 @@ public class ServerThread implements Runnable {
                     orderBook.printMap(orderBook.getBidMap()); // print
                     break;
                 default:
-                    out.writeInt(-1);
+                    sendOrderId(-1);
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
 
             properties.setNextId(Order.getNextId());
-            out.writeInt(limitOrder.getId());
+            sendOrderId(limitOrder.getId());
         } catch (IOException e) {
             System.err.println("Error during insertLimitOrder: " + e.getMessage());
-            sendErrorResponse();
+            sendOrderId(-1);
         }
     }
 
@@ -324,7 +298,7 @@ public class ServerThread implements Runnable {
             transaction(values.getSize(), values.getType());
         } catch (IOException e) {
             System.err.println("Error during insertMarketOrder: " + e.getMessage());
-            sendErrorResponse();
+            sendOrderId(-1);
         }
     }
 
@@ -336,7 +310,7 @@ public class ServerThread implements Runnable {
 
             ConcurrentSkipListMap<Integer, List<LimitOrder>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
             if (map.isEmpty()) {
-                out.writeInt(-1);
+                sendOrderId(-1);
                 return;
             }
 
@@ -361,9 +335,8 @@ public class ServerThread implements Runnable {
                     if (size == 0) {
                         break;
                     }
-
-                    if (size < 0) {
-                        out.writeInt(-1);
+                    else if (size < 0) {
+                        sendOrderId(-1);
                         throw new IllegalArgumentException("Size cannot be negative: " + size);
                     }
                 }
@@ -371,31 +344,25 @@ public class ServerThread implements Runnable {
             }
             if (size > 0) {
                 orderBook.resetOrderBook(type);
-                out.writeInt(-1);
-            } else {
+                sendOrderId(-1);
+            } else if (size == 0) {
                 orderBook.updateOrderBook(type);
                 MarketOrder marketOrder = new MarketOrder(type, size);
                 properties.setNextId(Order.getNextId());
-                out.writeInt(marketOrder.getId());
-            }
-            if (type.equals(Costants.ASK)){
-                System.out.println("\n\nbidMap");
-                orderBook.printMap(orderBook.getBidMap()); // print
-            }
-
-            else if (type.equals(Costants.BID)){
-                System.out.println("\n\naskMap");
-                orderBook.printMap(orderBook.getAskMap()); // print
+                sendOrderId(marketOrder.getId());
+            } else { // negative size ERROR
+                sendOrderId(-1);
+                throw new IllegalArgumentException("Size cannot be negative: " + size);
             }
         } catch (IOException e) {
             System.err.println("Error during transaction: " + e.getMessage());
-            sendErrorResponse();
+            sendOrderId(-1);
         }
     }
 
-    private void sendErrorResponse() {
+    private void sendOrderId(int id) {
         try {
-            out.writeInt(-1);
+            out.writeInt(id);
         } catch (IOException e) {
             System.err.println("Error sending error response: " + e.getMessage());
             e.printStackTrace();

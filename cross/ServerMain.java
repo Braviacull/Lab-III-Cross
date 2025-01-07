@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ServerMain {
 
     private MyProperties properties;
-    private Gson gson;
+    private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private ServerSocket server;
     private ExecutorService connessioni;
     private ConcurrentHashMap<String, User> usersMap;
@@ -36,7 +36,6 @@ public class ServerMain {
 
     private void initializeServer() throws IOException {
         properties = new MyProperties(Costants.SERVER_PROPERTIES_FILE); // Load server properties
-        gson = new GsonBuilder().setPrettyPrinting().create(); // Initialize Gson for JSON operations
 
         usersMapTemp = loadMapFromJson(Costants.USERS_MAP_TEMP_FILE); // Load temporary user map from JSON
         usersMap = loadMapFromJson(Costants.USERS_MAP_FILE); // Load main user map from JSON
@@ -60,26 +59,32 @@ public class ServerMain {
         return usersMap;
     }
 
-    private void updateJson(ConcurrentHashMap<String, User> map, String filename) {
+    public static void updateJson(ConcurrentHashMap<String, User> map, String filename) {
+        Sync.safeWriteStarts(filename);
         try (FileWriter writer = new FileWriter(filename)) {
             gson.toJson(map, writer); // Save user map to JSON file
         } catch (IOException e) {
             System.err.println("Error updating map to " + filename + ": " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            Sync.safeWriteEnds(filename);
         }
     }
 
-    private ConcurrentHashMap<String, User> loadMapFromJson(String filename) {
+    public static ConcurrentHashMap<String, User> loadMapFromJson(String filename) {
+        Sync.safeReadStarts(filename);
         ConcurrentHashMap<String, User> map = new ConcurrentHashMap<>();
         try (FileReader reader = new FileReader(filename)) {
             Type userMapType = new TypeToken<ConcurrentHashMap<String, User>>(){}.getType();
             map = gson.fromJson(reader, userMapType); // Load user map from JSON file
         } catch (FileNotFoundException e) {
             System.out.println(filename + " not found, creating a new file.");
-            updateJson(map, filename); // Create new JSON file if not found
+            updateJson(new ConcurrentHashMap<>() , filename); // Create new JSON file if not found
         } catch (IOException e) {
             System.err.println("Error loading map from " + filename + ": " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            Sync.safeReadEnds(filename);
         }
         return map;
     }

@@ -51,45 +51,34 @@ public class OrderBook {
 
     // Syncronised
     public void updateJson(ConcurrentSkipListMap<Integer, List<LimitOrder>> map, String fileName) {
-        if (fileName.equals(Costants.ASK)) {
-            throw new IllegalArgumentException("TROVATO IL FILE ASK");
-        }
+        Sync.safeWriteStarts(fileName);
         try (FileWriter writer = new FileWriter(fileName)) {
             // Write the map to the JSON file
-            Sync.safeWriteStarts(fileName);
             gson.toJson(map, writer);
-            Sync.safeWriteEnds(fileName);
         } catch (IOException e) {
             System.err.println("Error updating JSON file " + fileName + ": " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            Sync.safeWriteEnds(fileName);
         }
     }
 
     // Syncronised
     public ConcurrentSkipListMap<Integer, List<LimitOrder>> loadMapFromJson(String fileName) {
         ConcurrentSkipListMap<Integer, List<LimitOrder>> map = new ConcurrentSkipListMap<>();
+        Sync.safeReadStarts(fileName);
         try (FileReader reader = new FileReader(fileName)) {
             // Load the map from the JSON file
             Type mapType = new TypeToken<ConcurrentSkipListMap<Integer, List<LimitOrder>>>(){}.getType();
-            Sync.safeReadStarts(fileName);
             map = gson.fromJson(reader, mapType);
-            Sync.safeReadEnds(fileName);
         } catch (FileNotFoundException e) {
             // File not found, create a new file
-            if (fileName.equals(Costants.ASK)) {
-                throw new IllegalArgumentException("TROVATO IL FILE ASK");
-            }
-            try (FileWriter writer = new FileWriter(fileName)) {
-                Sync.safeWriteStarts(fileName);
-                gson.toJson(map, writer);
-                Sync.safeWriteEnds(fileName);
-            } catch (IOException ex) {
-                System.err.println("Error creating JSON file " + fileName + ": " + ex.getMessage());
-                ex.printStackTrace();
-            }
+            updateJson(new ConcurrentSkipListMap<Integer, List<LimitOrder>> (), fileName);
         } catch (IOException e) {
             System.err.println("Error loading JSON file " + fileName + ": " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            Sync.safeReadEnds(fileName);
         }
         return map;
     }

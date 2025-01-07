@@ -13,6 +13,12 @@
       "orderId": 112,
       "type": "ask",
       "size": 10000
+    },
+    {
+      "price": 100000,
+      "orderId": 125,
+      "type": "ask",
+      "size": 100
     }
   ]
 }
