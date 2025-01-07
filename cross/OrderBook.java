@@ -1,8 +1,5 @@
 package cross;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.LinkedList;
@@ -15,90 +12,71 @@ import com.google.gson.reflect.TypeToken;
 
 public class OrderBook {
     private Gson gson;
-    private ConcurrentSkipListMap<Integer, List<LimitOrder>> bidMap;
-    private ConcurrentSkipListMap<Integer, List<LimitOrder>> askMap;
+    private ConcurrentSkipListMap<Integer, List<LimitOrder>> bidMap = new ConcurrentSkipListMap<Integer, List<LimitOrder>>();
+    private ConcurrentSkipListMap<Integer, List<LimitOrder>> askMap = new ConcurrentSkipListMap<Integer, List<LimitOrder>>();
     private AtomicInteger marketPrice;
+    private Type mapType;
 
     public OrderBook(Gson gson) {
         this.gson = gson;
 
+        mapType = new TypeToken<ConcurrentSkipListMap<Integer, List<LimitOrder>>>(){}.getType();
         // Load bid and ask maps from JSON files
-        bidMap = loadMapFromJson(Costants.BID_MAP_FILE);
-        askMap = loadMapFromJson(Costants.ASK_MAP_FILE);
+        loadMapFromJson(Costants.BID_MAP_FILE, bidMap);
+        loadMapFromJson(Costants.ASK_MAP_FILE, askMap);
 
         // Load temporary bid and ask maps from JSON files
-        ConcurrentSkipListMap<Integer, List<LimitOrder>> bidMapTemp = loadMapFromJson(Costants.BID_MAP_TEMP_FILE);
-        ConcurrentSkipListMap<Integer, List<LimitOrder>> askMapTemp = loadMapFromJson(Costants.ASK_MAP_TEMP_FILE);
+        ConcurrentSkipListMap<Integer, List<LimitOrder>> bidMapTemp = new ConcurrentSkipListMap<Integer, List<LimitOrder>>();
+        ConcurrentSkipListMap<Integer, List<LimitOrder>> askMapTemp = new ConcurrentSkipListMap<Integer, List<LimitOrder>>();
+        loadMapFromJson(Costants.BID_MAP_TEMP_FILE, bidMapTemp);
+        loadMapFromJson(Costants.ASK_MAP_TEMP_FILE, askMapTemp);
 
         // Update main maps with temporary maps
-        updateMap(bidMapTemp, bidMap, Costants.BID_MAP_FILE);
-        updateMap(askMapTemp, askMap, Costants.ASK_MAP_FILE);
+        updateLimitOrderMap(bidMap, bidMapTemp);
+        updateLimitOrderMap(askMap, askMapTemp);
+
+        // Update main jsons with main maps
+        updateJson(Costants.BID_MAP_FILE, bidMap);
+        updateJson(Costants.ASK_MAP_FILE, askMap);
 
         // Clear temporary maps
-        updateJson(new ConcurrentSkipListMap<>(), Costants.BID_MAP_TEMP_FILE);
-        updateJson(new ConcurrentSkipListMap<>(), Costants.ASK_MAP_TEMP_FILE);
+        updateJson(Costants.BID_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, List<LimitOrder>>());
+        updateJson(Costants.ASK_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, List<LimitOrder>>());
     }
 
-    // Syncronised: LA MAPTEMP NON É CONDIVISA E addLimitOrder É SYNCRONISED
-    public void updateMap(ConcurrentSkipListMap<Integer, List<LimitOrder>> mapTemp, ConcurrentSkipListMap<Integer, List<LimitOrder>> map, String fileName) {
-        for (List<LimitOrder> list : mapTemp.values()) {
+    public void loadMapFromJson (String fileName, ConcurrentSkipListMap<Integer, List<LimitOrder>> map) {
+        MyUtils.loadMapFromJson(fileName, map, mapType, gson);
+    }
+
+    public void updateJson (String fileName, ConcurrentSkipListMap<Integer, List<LimitOrder>> map) {
+        MyUtils.updateJson(fileName, map, gson);
+    }
+
+    // Syncronised: LA SOURCEMAP NON É CONDIVISA E addLimitOrder É SYNCRONISED
+    public void updateLimitOrderMap(ConcurrentSkipListMap<Integer, List<LimitOrder>> targetMap, ConcurrentSkipListMap<Integer, List<LimitOrder>> sourceMap) {
+        for (List<LimitOrder> list : sourceMap.values()) {
             for (LimitOrder limitOrder : list) {
-                addLimitOrder(limitOrder, map);
+                addLimitOrder(limitOrder, targetMap);
             }
         }
-        updateJson(map, fileName);
-    }
-
-    // Syncronised
-    public void updateJson(ConcurrentSkipListMap<Integer, List<LimitOrder>> map, String fileName) {
-        Sync.safeWriteStarts(fileName);
-        try (FileWriter writer = new FileWriter(fileName)) {
-            // Write the map to the JSON file
-            gson.toJson(map, writer);
-        } catch (IOException e) {
-            System.err.println("Error updating JSON file " + fileName + ": " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            Sync.safeWriteEnds(fileName);
-        }
-    }
-
-    // Syncronised
-    public ConcurrentSkipListMap<Integer, List<LimitOrder>> loadMapFromJson(String fileName) {
-        ConcurrentSkipListMap<Integer, List<LimitOrder>> map = new ConcurrentSkipListMap<>();
-        Sync.safeReadStarts(fileName);
-        try (FileReader reader = new FileReader(fileName)) {
-            // Load the map from the JSON file
-            Type mapType = new TypeToken<ConcurrentSkipListMap<Integer, List<LimitOrder>>>(){}.getType();
-            map = gson.fromJson(reader, mapType);
-        } catch (FileNotFoundException e) {
-            // File not found, create a new file
-            updateJson(new ConcurrentSkipListMap<Integer, List<LimitOrder>> (), fileName);
-        } catch (IOException e) {
-            System.err.println("Error loading JSON file " + fileName + ": " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            Sync.safeReadEnds(fileName);
-        }
-        return map;
     }
 
     // Syncronised
     public void resetOrderBook(String type) throws IOException {
-        ConcurrentSkipListMap<Integer, List<LimitOrder>> map;
-        ConcurrentSkipListMap<Integer, List<LimitOrder>> mapTemp;
+        ConcurrentSkipListMap<Integer, List<LimitOrder>> map = new ConcurrentSkipListMap<Integer, List<LimitOrder>>();
+        ConcurrentSkipListMap<Integer, List<LimitOrder>> mapTemp = new ConcurrentSkipListMap<Integer, List<LimitOrder>>();
         switch (type) {
             case Costants.ASK:
-                mapTemp = loadMapFromJson(Costants.BID_MAP_TEMP_FILE);
-                map = loadMapFromJson(Costants.BID_MAP_FILE);
-                updateMap(mapTemp, map, type);
+                loadMapFromJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
+                loadMapFromJson(Costants.BID_MAP_FILE, map);
+                updateLimitOrderMap(map, mapTemp);
                 setBidMap(map);
                 updateOrderBook(type);
                 break;
             case Costants.BID:
-                mapTemp = loadMapFromJson(Costants.ASK_MAP_TEMP_FILE);
-                map = loadMapFromJson(Costants.ASK_MAP_FILE);
-                updateMap(mapTemp, map, type);
+                loadMapFromJson(Costants.ASK_MAP_TEMP_FILE, mapTemp);
+                loadMapFromJson(Costants.ASK_MAP_FILE, map);
+                updateLimitOrderMap(map, mapTemp);
                 setAskMap(map);
                 updateOrderBook(type);
                 break;
@@ -111,12 +89,12 @@ public class OrderBook {
     public void updateOrderBook(String type) throws IOException {
         switch (type) {
             case Costants.ASK:
-                updateJson(getBidMap(), Costants.BID_MAP_FILE);
-                updateJson(new ConcurrentSkipListMap<>(), Costants.BID_MAP_TEMP_FILE);
+                updateJson(Costants.BID_MAP_FILE, getBidMap());
+                updateJson(Costants.BID_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, List<LimitOrder>>());
                 break;
             case Costants.BID:
-                updateJson(getAskMap(), Costants.ASK_MAP_FILE);
-                updateJson(new ConcurrentSkipListMap<>(), Costants.ASK_MAP_TEMP_FILE);
+                updateJson(Costants.ASK_MAP_FILE, getAskMap());
+                updateJson(Costants.ASK_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, List<LimitOrder>>());
                 break;
             default:
                 throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
@@ -132,6 +110,7 @@ public class OrderBook {
                 System.out.println("Type: " + limitOrder.getType());
                 System.out.println("Size: " + limitOrder.getSize());
                 System.out.println("Price: " + price);
+                System.out.println("");
             }
         }
     }

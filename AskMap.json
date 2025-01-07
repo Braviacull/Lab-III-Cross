@@ -1,4 +1,12 @@
 {
+  "10001": [
+    {
+      "price": 10001,
+      "orderId": 132,
+      "type": "ask",
+      "size": 99
+    }
+  ],
   "60000": [
     {
       "price": 60000,
@@ -19,6 +27,12 @@
       "orderId": 125,
       "type": "ask",
       "size": 100
+    },
+    {
+      "price": 100000,
+      "orderId": 127,
+      "type": "ask",
+      "size": 10000
     }
   ]
 }

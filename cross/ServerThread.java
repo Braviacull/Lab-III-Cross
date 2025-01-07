@@ -1,6 +1,7 @@
 package cross;
 
 import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 
 import java.util.Iterator;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -121,9 +123,9 @@ public class ServerThread implements Runnable {
                 usersMap.put(user.getUsername(), user);
 
                 // Update usersMapTemp.json
-                usersMapTemp = ServerMain.loadMapFromJson(Costants.USERS_MAP_TEMP_FILE);
+                ServerMain.loadMapFromJson(Costants.USERS_MAP_TEMP_FILE, usersMapTemp);
                 usersMapTemp.put(user.getUsername(), user);
-                ServerMain.updateJson(usersMapTemp, Costants.USERS_MAP_TEMP_FILE);
+                ServerMain.updateJson(Costants.USERS_MAP_TEMP_FILE, usersMapTemp);
 
                 responseStatus = new ResponseStatus(100, reg);
             }
@@ -164,9 +166,9 @@ public class ServerThread implements Runnable {
                     usersMap.put(username, newUser);
 
                     // Update usersMapTemp.json
-                    usersMapTemp = ServerMain.loadMapFromJson(Costants.USERS_MAP_TEMP_FILE);
+                    ServerMain.loadMapFromJson(Costants.USERS_MAP_TEMP_FILE, usersMapTemp);
                     usersMapTemp.put(username, newUser);
-                    ServerMain.updateJson(usersMapTemp, Costants.USERS_MAP_TEMP_FILE);
+                    ServerMain.updateJson(Costants.USERS_MAP_TEMP_FILE, usersMapTemp);
 
                     responseStatus = new ResponseStatus(100, update);
                 } else {
@@ -256,20 +258,20 @@ public class ServerThread implements Runnable {
             InsertLimitOrderRequest.Values values = insertLO.getValues();
             LimitOrder limitOrder = new LimitOrder(values.getType(), values.getSize(), values.getPrice());
 
-            ConcurrentSkipListMap<Integer, List<LimitOrder>> mapTemp;
+            ConcurrentSkipListMap<Integer, List<LimitOrder>> mapTemp = new ConcurrentSkipListMap<Integer, List<LimitOrder>>();
             switch (values.getType()) {
                 case Costants.ASK:
                     orderBook.addLimitOrder(limitOrder, orderBook.getAskMap());
-                    mapTemp = orderBook.loadMapFromJson(Costants.ASK_MAP_TEMP_FILE);
+                    orderBook.loadMapFromJson(Costants.ASK_MAP_TEMP_FILE, mapTemp);
                     orderBook.addLimitOrder(limitOrder, mapTemp);
-                    orderBook.updateJson(mapTemp, Costants.ASK_MAP_TEMP_FILE);
+                    orderBook.updateJson(Costants.ASK_MAP_TEMP_FILE, mapTemp);
                     orderBook.printMap(orderBook.getAskMap()); // print
                     break;
                 case Costants.BID:
                     orderBook.addLimitOrder(limitOrder, orderBook.getBidMap());
-                    mapTemp = orderBook.loadMapFromJson(Costants.BID_MAP_TEMP_FILE);
+                    orderBook.loadMapFromJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
                     orderBook.addLimitOrder(limitOrder, mapTemp);
-                    orderBook.updateJson(mapTemp, Costants.BID_MAP_TEMP_FILE);
+                    orderBook.updateJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
                     orderBook.printMap(orderBook.getBidMap()); // print
                     break;
                 default:
