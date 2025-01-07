@@ -1,5 +1,6 @@
 package cross;
 
+import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -15,8 +16,6 @@ public class MyUtils {
         targetMap.clear(); // Svuota la mappa target
         targetMap.putAll(sourceMap); // Copia il contenuto della mappa source nella mappa target
     }
-
-    
 
     public static <K,V> void updateJson(String filename, Map<K, V> map, Gson gson) {
         Sync.safeWriteStarts(filename);
@@ -43,6 +42,24 @@ public class MyUtils {
         } catch (IOException e) {
             Sync.safeReadEnds(filename);
             System.err.println("Error loading map from " + filename + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static void sendLine (String line, DataOutputStream out) {
+        try {
+            out.writeUTF(line);
+        } catch (IOException e) {
+            System.err.println("Error receiving order ID: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static void sendOrderId(int id, DataOutputStream out) {
+        try {
+            out.writeInt(id);
+        } catch (IOException e) {
+            System.err.println("Error sending Order ID: " + e.getMessage());
             e.printStackTrace();
         }
     }

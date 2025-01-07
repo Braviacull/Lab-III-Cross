@@ -8,11 +8,19 @@ public class Order {
     private final int orderId;
     private String type; // ask/bid
     private int size;
+    private int price = -1;
 
     public Order(String type, int size) {
         this.orderId = Order.nextID.getAndIncrement();
         setType(type);
         this.size = size;
+    }
+
+    public Order(String type, int size, int price) {
+        this.orderId = Order.nextID.getAndIncrement();
+        setType(type);
+        this.size = size;
+        this.price = price;
     }
 
     public void setType(String type) {
@@ -49,6 +57,10 @@ public class Order {
     
     public int getSize () {
         return size;
+    }
+
+    public int getPrice () {
+        return price;
     }
 
 }

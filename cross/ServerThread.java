@@ -95,6 +95,9 @@ public class ServerThread implements Runnable {
             case Costants.INSERT_MARKET_ORDER:
                 handleInsertMarketOrder();
                 break;
+            case Costants.INSERT_STOP_ORDER:
+                handleInsertStopOrder();
+                break;
             default:
                 if (operation.equals(stopString)) {
                     System.out.println("Client disconnected");
@@ -131,7 +134,7 @@ public class ServerThread implements Runnable {
             }
         } catch (IOException e) {
             System.err.println("Error during register: " + e.getMessage());
-            sendOrderId(-1);
+            MyUtils.sendOrderId(-1, out);
         }
     }
 
@@ -179,7 +182,7 @@ public class ServerThread implements Runnable {
             }
         } catch (IOException e) {
             System.err.println("Error during updateCredentials: " + e.getMessage());
-            sendOrderId(-1);
+            MyUtils.sendOrderId(-1, out);
         }
     }
 
@@ -214,7 +217,7 @@ public class ServerThread implements Runnable {
             }
         } catch (IOException e) {
             System.err.println("Error during login: " + e.getMessage());
-            sendOrderId(-1);
+            MyUtils.sendOrderId(-1, out);
         }
     }
 
@@ -242,7 +245,7 @@ public class ServerThread implements Runnable {
             }
         } catch (IOException e) {
             System.err.println("Error during logout: " + e.getMessage());
-            sendOrderId(-1);
+            MyUtils.sendOrderId(-1, out);
         }
     }
 
@@ -256,34 +259,32 @@ public class ServerThread implements Runnable {
             }
 
             InsertLimitOrderRequest.Values values = insertLO.getValues();
-            LimitOrder limitOrder = new LimitOrder(values.getType(), values.getSize(), values.getPrice());
+            Order limitOrder = new Order(values.getType(), values.getSize(), values.getPrice());
 
-            ConcurrentSkipListMap<Integer, List<LimitOrder>> mapTemp = new ConcurrentSkipListMap<Integer, List<LimitOrder>>();
+            ConcurrentSkipListMap<Integer, List<Order>> mapTemp = new ConcurrentSkipListMap<Integer, List<Order>>();
             switch (values.getType()) {
                 case Costants.ASK:
-                    orderBook.addLimitOrder(limitOrder, orderBook.getAskMap());
+                    orderBook.addOrder(limitOrder, orderBook.getAskMap());
                     orderBook.loadMapFromJson(Costants.ASK_MAP_TEMP_FILE, mapTemp);
-                    orderBook.addLimitOrder(limitOrder, mapTemp);
+                    orderBook.addOrder(limitOrder, mapTemp);
                     orderBook.updateJson(Costants.ASK_MAP_TEMP_FILE, mapTemp);
-                    orderBook.printMap(orderBook.getAskMap()); // print
                     break;
                 case Costants.BID:
-                    orderBook.addLimitOrder(limitOrder, orderBook.getBidMap());
+                    orderBook.addOrder(limitOrder, orderBook.getBidMap());
                     orderBook.loadMapFromJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
-                    orderBook.addLimitOrder(limitOrder, mapTemp);
+                    orderBook.addOrder(limitOrder, mapTemp);
                     orderBook.updateJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
-                    orderBook.printMap(orderBook.getBidMap()); // print
                     break;
                 default:
-                    sendOrderId(-1);
+                    MyUtils.sendOrderId(-1, out);
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
 
             properties.setNextId(Order.getNextId());
-            sendOrderId(limitOrder.getId());
+            MyUtils.sendOrderId(limitOrder.getId(), out);
         } catch (IOException e) {
             System.err.println("Error during insertLimitOrder: " + e.getMessage());
-            sendOrderId(-1);
+            MyUtils.sendOrderId(-1, out);
         }
     }
 
@@ -300,7 +301,7 @@ public class ServerThread implements Runnable {
             transaction(values.getSize(), values.getType());
         } catch (IOException e) {
             System.err.println("Error during insertMarketOrder: " + e.getMessage());
-            sendOrderId(-1);
+            MyUtils.sendOrderId(-1, out);
         }
     }
 
@@ -310,18 +311,18 @@ public class ServerThread implements Runnable {
                 throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
 
-            ConcurrentSkipListMap<Integer, List<LimitOrder>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
+            ConcurrentSkipListMap<Integer, List<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
             if (map.isEmpty()) {
-                sendOrderId(-1);
+                MyUtils.sendOrderId(-1, out);
                 return;
             }
 
-            Integer price = Costants.ASK.equals(type) ? map.lastKey() : map.firstKey();
+            Integer price = Costants.ASK.equals(type) ? orderBook.getBidMarketPrice() : orderBook.getAskMarketPrice(); // get market price
             while (size > 0 && price != null) {
-                List<LimitOrder> list = map.get(price);
-                Iterator<LimitOrder> iterator = list.iterator();
+                List<Order> list = map.get(price);
+                Iterator<Order> iterator = list.iterator();
                 while (iterator.hasNext() && size > 0) {
-                    LimitOrder limitOrder = iterator.next();
+                    Order limitOrder = iterator.next();
                     if (size >= limitOrder.getSize()) {
                         size -= limitOrder.getSize();
                         iterator.remove();
@@ -338,7 +339,7 @@ public class ServerThread implements Runnable {
                         break;
                     }
                     else if (size < 0) {
-                        sendOrderId(-1);
+                        MyUtils.sendOrderId(-1, out);
                         throw new IllegalArgumentException("Size cannot be negative: " + size);
                     }
                 }
@@ -346,28 +347,58 @@ public class ServerThread implements Runnable {
             }
             if (size > 0) {
                 orderBook.resetOrderBook(type);
-                sendOrderId(-1);
+                MyUtils.sendOrderId(-1, out);
             } else if (size == 0) {
                 orderBook.updateOrderBook(type);
-                MarketOrder marketOrder = new MarketOrder(type, size);
+                Order marketOrder = new Order(type, size);
                 properties.setNextId(Order.getNextId());
-                sendOrderId(marketOrder.getId());
+                MyUtils.sendOrderId(marketOrder.getId(), out);
             } else { // negative size ERROR
-                sendOrderId(-1);
+                MyUtils.sendOrderId(-1, out);
                 throw new IllegalArgumentException("Size cannot be negative: " + size);
             }
         } catch (IOException e) {
             System.err.println("Error during transaction: " + e.getMessage());
-            sendOrderId(-1);
+            MyUtils.sendOrderId(-1, out);
         }
     }
 
-    private void sendOrderId(int id) {
+    private void handleInsertStopOrder () {
         try {
-            out.writeInt(id);
+            String json = in.readUTF();
+            InsertStopOrderRequest insertSO = gson.fromJson(json, InsertStopOrderRequest.class);
+
+            if (!Costants.INSERT_STOP_ORDER.equals(insertSO.getOperation())) {
+                throw new IllegalArgumentException("Invalid operation: " + insertSO.getOperation());
+            }
+
+            InsertStopOrderRequest.Values values = insertSO.getValues();
+            Order stopOrder = new Order(values.getType(), values.getSize(), values.getPrice());
+
+            ConcurrentSkipListMap<Integer, List<Order>> mapTempStop = new ConcurrentSkipListMap<Integer, List<Order>>();
+            switch (values.getType()) {
+                case Costants.ASK:
+                    orderBook.addOrder(stopOrder, orderBook.getAskMap());
+                    orderBook.loadMapFromJson(Costants.ASK_MAP_TEMP_STOP_FILE, mapTempStop);
+                    orderBook.addOrder(stopOrder, mapTempStop);
+                    orderBook.updateJson(Costants.ASK_MAP_TEMP_STOP_FILE, mapTempStop);
+                    break;
+                case Costants.BID:
+                    orderBook.addOrder(stopOrder, orderBook.getBidMap());
+                    orderBook.loadMapFromJson(Costants.BID_MAP_TEMP_STOP_FILE, mapTempStop);
+                    orderBook.addOrder(stopOrder, mapTempStop);
+                    orderBook.updateJson(Costants.BID_MAP_TEMP_STOP_FILE, mapTempStop);
+                    break;
+                default:
+                    MyUtils.sendOrderId(-1, out);
+                    throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+            }
+
+            properties.setNextId(Order.getNextId());
+            MyUtils.sendOrderId(stopOrder.getId(), out);
         } catch (IOException e) {
-            System.err.println("Error sending error response: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Error during insertLimitOrder: " + e.getMessage());
+            MyUtils.sendOrderId(-1, out);
         }
     }
 }

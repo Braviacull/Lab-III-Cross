@@ -1,38 +1,54 @@
 {
+  "1000": [
+    {
+      "orderId": 140,
+      "type": "ask",
+      "size": 10,
+      "price": 1000
+    }
+  ],
   "10001": [
     {
-      "price": 10001,
       "orderId": 132,
       "type": "ask",
-      "size": 99
+      "size": 99,
+      "price": 10001
+    }
+  ],
+  "20000": [
+    {
+      "orderId": 139,
+      "type": "ask",
+      "size": 1,
+      "price": 20000
     }
   ],
   "60000": [
     {
-      "price": 60000,
       "orderId": 123,
       "type": "ask",
-      "size": 200
+      "size": 200,
+      "price": 60000
     }
   ],
   "100000": [
     {
-      "price": 100000,
       "orderId": 112,
       "type": "ask",
-      "size": 10000
+      "size": 10000,
+      "price": 100000
     },
     {
-      "price": 100000,
       "orderId": 125,
       "type": "ask",
-      "size": 100
+      "size": 100,
+      "price": 100000
     },
     {
-      "price": 100000,
       "orderId": 127,
       "type": "ask",
-      "size": 10000
+      "size": 10000,
+      "price": 100000
     }
   ]
 }

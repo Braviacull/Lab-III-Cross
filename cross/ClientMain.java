@@ -76,7 +76,7 @@ public class ClientMain {
                         break;
                 }
             } else if (loggedIn) {
-                System.out.println("Possible actions: (exit, logout, insertLimitOrder, insertMarketOrder)");
+                System.out.println("Possible actions: (exit, logout, insertLimitOrder, insertMarketOrder, insertStopOrder)");
 
                 line = scanner.nextLine();
 
@@ -90,6 +90,9 @@ public class ClientMain {
                     case Costants.INSERT_MARKET_ORDER:
                         handleInsertMarketOrder();
                         break;
+                    case Costants.INSERT_STOP_ORDER:
+                        handleInstertStopOrder();
+                        break;
                     default:
                         defaultBehavior(line);
                         break;
@@ -99,66 +102,77 @@ public class ClientMain {
         close(); // Close resources when done
     }
 
-    private void handleRegister() throws IOException {
-        out.writeUTF(Costants.REGISTER);
+    private void handleRegister(){
+        MyUtils.sendLine(Costants.REGISTER, out);
         String username = scanField("username"); // Scan username
         String password = scanField("password"); // Scan password
         RegistrationRequest reg = RequestFactory.createRegistrationRequest(username, password); // Create registration request
         String jsonReg = gson.toJson(reg); // Convert request to JSON
-        sendString(jsonReg); // Send JSON request to the server
+        MyUtils.sendLine(jsonReg, out); // Send JSON request to the server
         checkResponse(Costants.REGISTER, username); // Check server response
     }
 
-    private void handleUpdateCredentials() throws IOException {
-        out.writeUTF(Costants.UPDATE_CREDENTIALS);
+    private void handleUpdateCredentials(){
+        MyUtils.sendLine(Costants.UPDATE_CREDENTIALS, out);
         String username = scanField("username"); // Scan username
         String oldPassword = scanField("old password"); // Scan old password
         String newPassword = scanField("new password"); // Scan new password
         UpdateCredentialsRequest update = RequestFactory.createUpdateCredentialsRequest(username, oldPassword, newPassword); // Create update credentials request
         String jsonUpdate = gson.toJson(update); // Convert request to JSON
-        sendString(jsonUpdate); // Send JSON request to the server
+        MyUtils.sendLine(jsonUpdate, out); // Send JSON request to the server
         checkResponse(Costants.UPDATE_CREDENTIALS, username); // Check server response
     }
 
-    private void handleLogin() throws IOException {
-        out.writeUTF(Costants.LOGIN);
+    private void handleLogin(){
+        MyUtils.sendLine(Costants.LOGIN, out);
         String username = scanField("username"); // Scan username
         String password = scanField("password"); // Scan password
         LoginRequest login = RequestFactory.createLoginRequest(username, password); // Create login request
         String jsonLogin = gson.toJson(login); // Convert request to JSON
-        sendString(jsonLogin); // Send JSON request to the server
+        MyUtils.sendLine(jsonLogin, out); // Send JSON request to the server
         checkResponse(Costants.LOGIN, username); // Check server response
     }
 
-    private void handleLogout() throws IOException {
-        out.writeUTF(Costants.LOGOUT);
+    private void handleLogout(){
+        MyUtils.sendLine(Costants.LOGOUT, out);
         LogoutRequest logout = RequestFactory.createLogoutRequest(); // Create logout request
         String jsonLogout = gson.toJson(logout); // Convert request to JSON
-        sendString(jsonLogout); // Send JSON request to the server
-        sendString(username); // Send username separately as logout.Values is an empty object
+        MyUtils.sendLine(jsonLogout, out); // Send JSON request to the server
+        MyUtils.sendLine(username, out); // Send username separately as logout.Values is an empty object
         checkResponse(Costants.LOGOUT, username); // Check server response
     }
 
-    private void handleInsertLimitOrder() throws IOException {
-        out.writeUTF(Costants.INSERT_LIMIT_ORDER);
+    private void handleInsertLimitOrder(){
+        MyUtils.sendLine(Costants.INSERT_LIMIT_ORDER, out);
         String type = scanType(); // Scan the type of order (ask or bid)
         String size = scanIntField("size"); // Scan the size of the order
         String price = scanIntField("price"); // Scan the price of the order
         InsertLimitOrderRequest insertLimitOrderRequest = RequestFactory.createInsertLimitOrderRequest(type, Integer.parseInt(size), Integer.parseInt(price)); // Create limit order request
         String json = gson.toJson(insertLimitOrderRequest); // Convert request to JSON
-        sendString(json); // Send JSON request to the server
+        MyUtils.sendLine(json, out); // Send JSON request to the server
         receiveIdOrder(); // Receive the order ID from the server
     }
 
-    private void handleInsertMarketOrder() throws IOException {
-        out.writeUTF(Costants.INSERT_MARKET_ORDER);
+    private void handleInsertMarketOrder(){
+        MyUtils.sendLine(Costants.INSERT_MARKET_ORDER, out);
         String type = scanType(); // Scan the type of order (ask or bid)
         String size = scanIntField("size"); // Scan the size of the order
         InsertMarketOrderRequest insertMarketOrderRequest = RequestFactory.createInsertMarketOrderRequest(type, Integer.parseInt(size)); // Create market order request
         String json = gson.toJson(insertMarketOrderRequest); // Convert request to JSON
-        sendString(json); // Send JSON request to the server
+        MyUtils.sendLine(json, out); // Send JSON request to the server
         receiveIdOrder(); // Receive the order ID from the server
     }
+
+    private void handleInstertStopOrder(){
+        MyUtils.sendLine(Costants.INSERT_STOP_ORDER, out);
+        String type = scanType(); // Scan the type of order (ask or bid)
+        String size = scanIntField("size"); // Scan the size of the order
+        String price = scanIntField("price"); // Scan the price of the order
+        InsertStopOrderRequest insertStopOrderRequest = RequestFactory.createInsertStopOrderRequest(type,  Integer.parseInt(size), Integer.parseInt(price));
+        String json = gson.toJson(insertStopOrderRequest); // Convert request to JSON
+        MyUtils.sendLine(json, out); // Send JSON request to the server
+        receiveIdOrder(); // Receive the order ID from the server
+    } 
 
     private void receiveIdOrder() {
         try {
@@ -215,16 +229,6 @@ public class ClientMain {
             if (scanner != null) scanner.close(); // Close scanner
         } catch (IOException e) {
             System.err.println("Error closing resources: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void sendString(String jsonRequest) {
-        try {
-            out.writeUTF(jsonRequest); // Send JSON request to the server
-            out.flush(); // Flush the output stream
-        } catch (IOException e) {
-            System.err.println("Error sending JSON request: " + e.getMessage());
             e.printStackTrace();
         }
     }

@@ -31,4 +31,9 @@ public class RequestFactory {
         InsertMarketOrderRequest.Values values = new InsertMarketOrderRequest.Values(type, size);
         return new InsertMarketOrderRequest (Costants.INSERT_MARKET_ORDER, values);
     }
+
+    public static InsertStopOrderRequest createInsertStopOrderRequest(String type, int size, int price) {
+        InsertStopOrderRequest.Values values = new InsertStopOrderRequest.Values(type, size, price);
+        return new InsertStopOrderRequest (Costants.INSERT_STOP_ORDER, values);
+    }
 }

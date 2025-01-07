@@ -21,8 +21,10 @@ public class Request {
                 break;
             case Costants.INSERT_MARKET_ORDER:
                 break;
+            case Costants.INSERT_STOP_ORDER:
+                break;
             default:
-                throw new IllegalArgumentException(operation + "not supported");
+                throw new IllegalArgumentException(operation + " not supported");
         }
         this.operation = operation;
     }

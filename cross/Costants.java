@@ -8,6 +8,8 @@ public class Costants {
     public static final String UPDATE_CREDENTIALS = "updateCredentials";
     public static final String INSERT_LIMIT_ORDER = "insertLimitOrder";
     public static final String INSERT_MARKET_ORDER = "insertMarketOrder";
+    public static final String INSERT_STOP_ORDER = "insertStopOrder";
+
     public static final String ASK = "ask";
     public static final String BID = "bid";
 
@@ -20,6 +22,10 @@ public class Costants {
     public static final String ASK_MAP_FILE = "askMap.json";
     public static final String BID_MAP_TEMP_FILE = "bidMapTemp.json";
     public static final String ASK_MAP_TEMP_FILE = "askMapTemp.json";
+    public static final String BID_MAP_STOP_FILE = "bidMapStop.json";
+    public static final String ASK_MAP_STOP_FILE = "askMapStop.json";
+    public static final String BID_MAP_TEMP_STOP_FILE = "bidMapTempStop.json";
+    public static final String ASK_MAP_TEMP_STOP_FILE = "askMapTempStop.json";
 
     public static final String USERS_MAP_TEMP_FILE = "usersMapTemp.json";
     public static final String USERS_MAP_FILE = "usersMap.json";
