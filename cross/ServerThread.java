@@ -259,13 +259,13 @@ public class ServerThread implements Runnable {
             }
 
             InsertLimitOrderRequest.Values values = insertLO.getValues();
-            Order limitOrder = new Order(values.getType(), values.getSize(), values.getPrice());
+            Order limitOrder = new Order(values.getType(), values.getSize(), values.getPrice(), username);
 
             ConcurrentSkipListMap<Integer, List<Order>> mapTemp = new ConcurrentSkipListMap<Integer, List<Order>>();
             int size = -1;
             switch (values.getType()) {
                 case Costants.ASK:
-                    if (values.getPrice() < orderBook.getBidMarketPrice()) {
+                    if (values.getPrice() <= orderBook.getBidMarketPrice()) { // spread <= 0
                         System.out.println(values.getPrice() + " " + orderBook.getBidMarketPrice());
                         size = transaction(values.getSize(), values.getType());
                         checkTransaction(size, values.getType());
@@ -278,7 +278,7 @@ public class ServerThread implements Runnable {
                     }
                     break;
                 case Costants.BID:
-                    if (values.getPrice() > orderBook.getAskMarketPrice()) {
+                    if (values.getPrice() >= orderBook.getAskMarketPrice()) { // spread <= 0
                         System.out.println(values.getPrice() + " " + orderBook.getAskMarketPrice());
                         size = transaction(values.getSize(), values.getType());
                         checkTransaction(size, values.getType());
@@ -374,7 +374,7 @@ public class ServerThread implements Runnable {
         if (size > 0) {
             MyUtils.sendOrderId(-1, out);
         } else if (size == 0) {
-            Order marketOrder = new Order(type, size);
+            Order marketOrder = new Order(type, size, username);
             properties.setNextId(Order.getNextId());
             MyUtils.sendOrderId(marketOrder.getId(), out);
         }
@@ -390,7 +390,7 @@ public class ServerThread implements Runnable {
             }
 
             InsertStopOrderRequest.Values values = insertSO.getValues();
-            Order stopOrder = new Order(values.getType(), values.getSize(), values.getPrice());
+            Order stopOrder = new Order(values.getType(), values.getSize(), values.getPrice(), username);
 
             ConcurrentSkipListMap<Integer, List<Order>> mapTempStop = new ConcurrentSkipListMap<Integer, List<Order>>();
             switch (values.getType()) {

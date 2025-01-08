@@ -1,1 +1,11 @@
-{}
+{
+  "100": [
+    {
+      "orderId": 166,
+      "type": "ask",
+      "size": 10,
+      "price": 100,
+      "username": "alessio"
+    }
+  ]
+}

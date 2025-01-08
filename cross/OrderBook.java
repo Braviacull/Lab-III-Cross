@@ -59,11 +59,19 @@ public class OrderBook {
     }
 
     public int getBidMarketPrice () {
-        return bidMap.lastKey();
+        if (!bidMap.isEmpty()){
+            return bidMap.lastKey();
+        } else {
+            return 0;
+        }
     }
 
     public int getAskMarketPrice () {
-        return askMap.firstKey();
+        if (!askMap.isEmpty()){
+            return askMap.firstKey();
+        } else {
+            return Integer.MAX_VALUE; // Rappresenta l'infinito positivo
+        }
     }
 
     public void loadMapFromJson (String fileName, ConcurrentSkipListMap<Integer, List<Order>> map) {

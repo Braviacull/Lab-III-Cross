@@ -9,18 +9,21 @@ public class Order {
     private String type; // ask/bid
     private int size;
     private int price = -1;
+    private String username;
 
-    public Order(String type, int size) {
+    public Order(String type, int size, String username) {
         this.orderId = Order.nextID.getAndIncrement();
         setType(type);
         this.size = size;
+        this.username = username;
     }
 
-    public Order(String type, int size, int price) {
+    public Order(String type, int size, int price, String username) {
         this.orderId = Order.nextID.getAndIncrement();
         setType(type);
         this.size = size;
         this.price = price;
+        this.username = username;
     }
 
     public void setType(String type) {
@@ -61,6 +64,10 @@ public class Order {
 
     public int getPrice () {
         return price;
+    }
+
+    public String getUsername () {
+        return username;
     }
 
 }
