@@ -131,23 +131,17 @@ public class OrderBook {
         }
     }
 
-    // da eliminare
-    public void printMap(ConcurrentSkipListMap<Integer, List<Order>> map) {
-        for (Map.Entry<Integer, List<Order>> entry : map.entrySet()) {
-            Integer price = entry.getKey();
-            List<Order> limitOrders = entry.getValue();
-            for (Order limitOrder : limitOrders) {
-                System.out.println("Type: " + limitOrder.getType());
-                System.out.println("Size: " + limitOrder.getSize());
-                System.out.println("Price: " + price);
-                System.out.println("");
-            }
-        }
-    }
-
     // Syncronised
     public synchronized void addOrder(Order limitOrder, ConcurrentSkipListMap<Integer, List<Order>> map) {
         map.computeIfAbsent(limitOrder.getPrice(), k -> new LinkedList<>()).add(limitOrder);
+    }
+
+    // Syncronised
+    public void addOrderToMapAndUpdateJson (String fileName, Order order) {
+        ConcurrentSkipListMap<Integer, List<Order>> temp = new ConcurrentSkipListMap<Integer, List<Order>>();
+        loadMapFromJson(fileName, temp);
+        addOrder(order, temp);
+        updateJson(fileName, temp);
     }
 
     // Syncronised

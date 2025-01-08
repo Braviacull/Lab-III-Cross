@@ -193,7 +193,6 @@ public class ClientMain {
         String json = gson.toJson(insertMarketOrderRequest); // Convert request to JSON
         MyUtils.sendLine(json, out); // Send JSON request to the server
         receiveIdOrder(); // Receive the order ID from the server
-
     }
 
     private void handleInstertStopOrder(){
@@ -216,7 +215,7 @@ public class ClientMain {
         try {
             int id = in.readInt(); // Read the order ID from the input stream
             if (id == -1) {
-                System.out.println("Order aborted");
+                System.out.println("Order aborted, error code: " + id);
             } else {
                 System.out.println("Order " + id + " submitted");
             }
