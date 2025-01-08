@@ -5,11 +5,13 @@ import com.google.gson.*;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ServerThread implements Runnable {
 
@@ -313,14 +315,14 @@ public class ServerThread implements Runnable {
             throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
         }
 
-        ConcurrentSkipListMap<Integer, List<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
+        ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
         if (map.isEmpty()) {
             return 1;
         }
 
         Integer price = Costants.ASK.equals(type) ? orderBook.getBidMarketPrice() : orderBook.getAskMarketPrice(); // get market price
         while (size > 0 && price != null) {
-            List<Order> list = map.get(price);
+            ConcurrentLinkedQueue<Order> list = map.get(price);
             Iterator<Order> iterator = list.iterator();
             while (iterator.hasNext() && size > 0) {
                 Order limitOrder = iterator.next();
