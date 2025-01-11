@@ -140,4 +140,25 @@ public class MyUtils {
             }
         }
     }
+
+    public static boolean searchAndDeleteOrderById (int idToDelete,ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map, String username) {
+        for (int price : map.keySet()) {
+            ConcurrentLinkedQueue<Order> queue = map.get(price);
+            for (Order order : queue) {
+                int id = order.getId();
+                if (id == idToDelete) {
+                    if (!order.getUsername().equals(username)){
+                        return false;
+                    }
+                    queue.remove(order);
+                    if (queue.isEmpty()){
+                        map.remove(price);
+                    }
+                    
+                    return true;
+                } 
+            }
+        }
+        return false;
+    }
 }

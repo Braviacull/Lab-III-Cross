@@ -7,14 +7,5 @@
       "price": 129,
       "username": "1"
     }
-  ],
-  "150": [
-    {
-      "orderId": 235,
-      "type": "ask",
-      "size": 5,
-      "price": 150,
-      "username": "alessio"
-    }
   ]
 }

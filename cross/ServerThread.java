@@ -3,6 +3,8 @@ package cross;
 import com.google.gson.*;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -95,6 +97,10 @@ public class ServerThread implements Runnable {
                 break;
             case Costants.INSERT_STOP_ORDER:
                 handleInsertStopOrder();
+                break;
+            case Costants.CANCEL_ORDER:
+                handleCancelOrder();
+                out.writeUTF(gson.toJson(responseStatus));
                 break;
             default:
                 if (operation.equals(stopString)) {
@@ -354,6 +360,59 @@ public class ServerThread implements Runnable {
             MyUtils.sendOrderId(stopOrder.getId(), out);
         } catch (IOException e) {
             System.err.println("Error during insertStopOrder: " + e.getMessage());
+        }
+    }
+
+    private void handleCancelOrder () {
+        try {
+            String json = in.readUTF();
+            CancelOrderRequest cancelOrderRequest = gson.fromJson(json, CancelOrderRequest.class);
+
+            if (!Costants.CANCEL_ORDER.equals(cancelOrderRequest.getOperation())) {
+                throw new IllegalArgumentException("Invalid operation: " + cancelOrderRequest.getOperation());
+            }
+
+            CancelOrderRequest.Values values = cancelOrderRequest.getValues();
+            int idToDelete = values.getOrderId();
+            
+            boolean deleted = false;
+            ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map;
+
+            if (!deleted) { // sempre vero
+                map = orderBook.getAskMap();
+                deleted = MyUtils.searchAndDeleteOrderById(idToDelete, map, username);
+                orderBook.updateJson(Costants.ASK_MAP_FILE, map);
+                orderBook.updateJson(Costants.ASK_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
+            }
+            if (!deleted) {
+                map = orderBook.getBidMap();
+                deleted = MyUtils.searchAndDeleteOrderById(idToDelete, map , username);
+                orderBook.updateJson(Costants.BID_MAP_FILE, map);
+                orderBook.updateJson(Costants.BID_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
+            }
+            if (!deleted) {
+                map = orderBook.getAskMapStop();
+                deleted = MyUtils.searchAndDeleteOrderById(idToDelete, map, username);
+                orderBook.updateJson(Costants.ASK_MAP_STOP_FILE, map);
+                orderBook.updateJson(Costants.ASK_MAP_TEMP_STOP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
+            }
+            if (!deleted) {
+                map = orderBook.getBidMapStop();
+                deleted = MyUtils.searchAndDeleteOrderById(idToDelete, map, username);
+                orderBook.updateJson(Costants.BID_MAP_STOP_FILE, map);
+                orderBook.updateJson(Costants.BID_MAP_TEMP_STOP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
+            }
+
+            // set error
+            if (!deleted) {
+                responseStatus = new ResponseStatus(101, cancelOrderRequest);
+            }
+            if (deleted) {
+                responseStatus = new ResponseStatus(100, cancelOrderRequest);
+            }
+
+        } catch (IOException e) {
+            System.err.println("Error during CancelOrder: " + e.getMessage());
         }
     }
 }

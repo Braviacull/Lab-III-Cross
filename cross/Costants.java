@@ -9,6 +9,7 @@ public class Costants {
     public static final String INSERT_LIMIT_ORDER = "insertLimitOrder";
     public static final String INSERT_MARKET_ORDER = "insertMarketOrder";
     public static final String INSERT_STOP_ORDER = "insertStopOrder";
+    public static final String CANCEL_ORDER = "cancelOrder";
 
     public static final String ASK = "ask";
     public static final String BID = "bid";

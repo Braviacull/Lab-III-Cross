@@ -77,7 +77,7 @@ public class ClientMain {
                         break;
                 }
             } else if (loggedIn) {
-                System.out.println("Possible actions: (exit, logout, insertLimitOrder, insertMarketOrder, insertStopOrder)");
+                System.out.println("Possible actions: (exit, logout, insertLimitOrder, insertMarketOrder, insertStopOrder, cancelOrder)");
 
                 line = scanner.nextLine();
 
@@ -93,6 +93,9 @@ public class ClientMain {
                         break;
                     case Costants.INSERT_STOP_ORDER:
                         handleInstertStopOrder();
+                        break;
+                    case Costants.CANCEL_ORDER:
+                        handleCancelOrder();
                         break;
                     default:
                         defaultBehavior(line);
@@ -209,6 +212,19 @@ public class ClientMain {
         MyUtils.sendLine(json, out); // Send JSON request to the server
         receiveIdOrder(); // Receive the order ID from the server
 
+    }
+
+    private void handleCancelOrder() {
+        String orderId = scanIntField("orderId");
+        cancelOrder (Integer.parseInt(orderId));
+    }
+
+    private void cancelOrder (int orderId) {
+        MyUtils.sendLine(Costants.CANCEL_ORDER, out);
+        CancelOrderRequest cancelOrderRequest = RequestFactory.createCancelOrderRequest(orderId);
+        String json = gson.toJson(cancelOrderRequest);
+        MyUtils.sendLine(json, out); // Send JSON request to the server
+        checkResponse(Costants.CANCEL_ORDER, username); // Check server response
     }
 
     private void receiveIdOrder() {

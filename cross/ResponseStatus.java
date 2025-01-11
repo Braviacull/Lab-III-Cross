@@ -40,6 +40,13 @@ public class ResponseStatus {
         errorMessagesLogout.put(101, "username/connection mismatch or non existent username or user not logged in");
     }
 
+    private static final Map<Integer, String> errorMessagesCancelOrder = new HashMap<>();
+
+    static {
+        errorMessagesCancelOrder.put(100, "OK");
+        errorMessagesCancelOrder.put(101, "order does not exist or belongs to different user or has already been finalized");
+    }
+
     public ResponseStatus(int responseCode, RegistrationRequest reg) {
         this.responseCode = responseCode;
         this.errorMessage = errorMessagesRegistration.getOrDefault(responseCode, "other error cases");
@@ -58,6 +65,11 @@ public class ResponseStatus {
     public ResponseStatus(int responseCode, LogoutRequest logout) {
         this.responseCode = responseCode;
         this.errorMessage = errorMessagesLogout.getOrDefault(responseCode, "other error cases");
+    }
+
+    public ResponseStatus(int responseCode, CancelOrderRequest cancel) {
+        this.responseCode = responseCode;
+        this.errorMessage = errorMessagesCancelOrder.getOrDefault(responseCode, "other error cases");
     }
 
     public ResponseStatus(){

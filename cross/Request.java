@@ -23,6 +23,8 @@ public class Request {
                 break;
             case Costants.INSERT_STOP_ORDER:
                 break;
+            case Costants.CANCEL_ORDER:
+                break;
             default:
                 throw new IllegalArgumentException(operation + " not supported");
         }

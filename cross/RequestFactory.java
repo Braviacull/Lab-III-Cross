@@ -36,4 +36,9 @@ public class RequestFactory {
         InsertStopOrderRequest.Values values = new InsertStopOrderRequest.Values(type, size, price);
         return new InsertStopOrderRequest (Costants.INSERT_STOP_ORDER, values);
     }
+
+    public static CancelOrderRequest createCancelOrderRequest(int orderId) {
+        CancelOrderRequest.Values values = new CancelOrderRequest.Values(orderId);
+        return new CancelOrderRequest(Costants.CANCEL_ORDER, values);
+    }
 }
