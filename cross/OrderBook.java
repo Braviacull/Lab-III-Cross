@@ -56,21 +56,22 @@ public class OrderBook {
         updateJson(Costants.ASK_MAP_TEMP_STOP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
     }
 
-    public int getBidMarketPrice () {
-        if (!bidMap.isEmpty()){
-            return bidMap.lastKey();
+    public int getBidMarketPrice (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
+        if (!map.isEmpty()){
+            return map.lastKey();
         } else {
             return 0;
         }
     }
 
-    public int getAskMarketPrice () {
-        if (!askMap.isEmpty()){
-            return askMap.firstKey();
+    public int getAskMarketPrice (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
+        if (!map.isEmpty()){
+            return map.firstKey();
         } else {
             return Integer.MAX_VALUE; // Rappresenta l'infinito positivo
         }
     }
+
 
     public void loadMapFromJson (String fileName, ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
         MyUtils.loadMapFromJson(fileName, map, mapType, gson);
@@ -179,6 +180,24 @@ public class OrderBook {
             return bidMap;
         } finally {
             Sync.bidMapLock.readLock().unlock();
+        }
+    }
+
+    public ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> getAskMapStop() {
+        Sync.askMapStopLock.readLock().lock();
+        try {
+            return askMapStop;
+        } finally {
+            Sync.askMapStopLock.readLock().unlock();
+        }
+    }
+
+    public ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> getBidMapStop() {
+        Sync.bidMapStopLock.readLock().lock();
+        try {
+            return bidMapStop;
+        } finally {
+            Sync.bidMapStopLock.readLock().unlock();
         }
     }
 }

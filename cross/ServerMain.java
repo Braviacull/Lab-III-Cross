@@ -52,6 +52,8 @@ public class ServerMain {
         updateJson(Costants.USERS_MAP_TEMP_FILE, new ConcurrentHashMap<>()); // Clear temporary user map
 
         orderBook = new OrderBook(gson); // Initialize order book
+        MyUtils.printMap(orderBook.getAskMapStop());
+        MyUtils.printMap(orderBook.getBidMap());
 
         int nextID = properties.getNextId(); // Get next order ID from properties
         Order.setNextID(nextID); // Set next order ID
@@ -66,12 +68,15 @@ public class ServerMain {
     }
 
     private void acceptConnections() {
-        System.out.println("ServerMain started");
+        System.out.println("Server started");
         connessioni = Executors.newCachedThreadPool(); // Initialize thread pool for handling connections
+        AskStopOrdersExecutor stopOrdersExecutor = new AskStopOrdersExecutor(orderBook, gson);
+        Thread thread = new Thread(stopOrdersExecutor);
+        thread.start();
         try {
             while (true) {
                 Socket clientSocket = server.accept(); // Accept client connection
-                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, orderBook, gson)); // Handle client connection in a new thread
+                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, orderBook, gson, stopOrdersExecutor)); // Handle client connection in a new thread
             }
         } catch (IOException e) {
             System.err.println("Error accepting connections: " + e.getMessage());

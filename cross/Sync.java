@@ -6,6 +6,8 @@ public class Sync {
     private static final ReentrantReadWriteLock usersMapTempFileLock = new ReentrantReadWriteLock();
     public static final ReentrantReadWriteLock bidMapLock = new ReentrantReadWriteLock(); // non usata qui
     public static final ReentrantReadWriteLock askMapLock = new ReentrantReadWriteLock(); // non usata qui
+    public static final ReentrantReadWriteLock bidMapStopLock = new ReentrantReadWriteLock(); // non usata qui
+    public static final ReentrantReadWriteLock askMapStopLock = new ReentrantReadWriteLock(); // non usata qui
     private static final ReentrantReadWriteLock bidMapFileLock = new ReentrantReadWriteLock();
     private static final ReentrantReadWriteLock askMapFileLock = new ReentrantReadWriteLock();
     private static final ReentrantReadWriteLock bidMapTempFileLock = new ReentrantReadWriteLock();

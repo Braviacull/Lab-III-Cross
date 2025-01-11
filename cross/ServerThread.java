@@ -2,16 +2,11 @@ package cross;
 
 import com.google.gson.*;
 
-import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ServerThread implements Runnable {
 
@@ -27,8 +22,9 @@ public class ServerThread implements Runnable {
     private String username;
     private Boolean loggedIn;
     private OrderBook orderBook;
+    private AskStopOrdersExecutor askStopOrdersExecutor;
 
-    public ServerThread(Socket socket, MyProperties properties, ConcurrentHashMap<String, User> usersMap, OrderBook orderBook, Gson gson) {
+    public ServerThread(Socket socket, MyProperties properties, ConcurrentHashMap<String, User> usersMap, OrderBook orderBook, Gson gson, AskStopOrdersExecutor askStopOrdersExecutor) {
         this.clientSocket = socket;
         this.properties = properties; 
         this.stopString = properties.getStopString();
@@ -38,6 +34,7 @@ public class ServerThread implements Runnable {
         this.username = "";
         this.loggedIn = false;
         this.orderBook = orderBook;
+        this.askStopOrdersExecutor = askStopOrdersExecutor;
     }
 
     private void close() {
@@ -260,10 +257,9 @@ public class ServerThread implements Runnable {
             int size = 1;
             switch (values.getType()) {
                 case Costants.ASK:
-                    if (values.getPrice() <= orderBook.getBidMarketPrice()) { // spread <= 0
-                        System.out.println(values.getPrice() + " " + orderBook.getBidMarketPrice());
-                        size = transaction(values.getSize(), values.getType());
-                        checkTransaction(size, values.getType());
+                    if (values.getPrice() <= orderBook.getBidMarketPrice(orderBook.getBidMap())) { // spread <= 0
+                        size = MyUtils.transaction(values.getSize(), values.getType(), orderBook);
+                        MyUtils.checkTransaction(size, values.getType(), orderBook);
                     }
                     if (size != 0) { //transazione non provata o non riuscita
                         orderBook.addOrder(limitOrder, orderBook.getAskMap());
@@ -271,14 +267,15 @@ public class ServerThread implements Runnable {
                     }
                     break;
                 case Costants.BID:
-                    if (values.getPrice() >= orderBook.getAskMarketPrice()) { // spread <= 0
-                        System.out.println(values.getPrice() + " " + orderBook.getAskMarketPrice());
-                        size = transaction(values.getSize(), values.getType());
-                        checkTransaction(size, values.getType());
+                    if (values.getPrice() >= orderBook.getAskMarketPrice(orderBook.getAskMap())) { // spread <= 0
+                        size = MyUtils.transaction(values.getSize(), values.getType(), orderBook);
+                        MyUtils.checkTransaction(size, values.getType(), orderBook);
                     }
                     if (size != 0) {
                         orderBook.addOrder(limitOrder, orderBook.getBidMap()); // add order to main map
                         orderBook.addOrderToMapAndUpdateJson (Costants.BID_MAP_TEMP_FILE, limitOrder); // update temp map and json
+                        // notify StopOrderExecutor that might be some askStopOrder to execute
+                        askStopOrdersExecutor.myNotify();
                     }
                     break;
                 default:
@@ -302,59 +299,12 @@ public class ServerThread implements Runnable {
             }
 
             InsertMarketOrderRequest.Values values = insertMO.getValues();
-            int size = transaction(values.getSize(), values.getType());
-            checkTransaction(size, values.getType());
+            int size = MyUtils.transaction(values.getSize(), values.getType(), orderBook);
+            MyUtils.checkTransaction(size, values.getType(), orderBook);
             sendMarketOrderIdAfterTransaction(size, values.getType());
+            
         } catch (IOException e) {
             System.err.println("Error during insertMarketOrder: " + e.getMessage());
-        }
-    }
-
-    private int transaction(int size, String type) {
-        if (!Costants.ASK.equals(type) && !Costants.BID.equals(type)) {
-            throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
-        }
-
-        ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
-        if (map.isEmpty()) {
-            return 1;
-        }
-
-        Integer price = Costants.ASK.equals(type) ? orderBook.getBidMarketPrice() : orderBook.getAskMarketPrice(); // get market price
-        while (size > 0 && price != null) {
-            ConcurrentLinkedQueue<Order> list = map.get(price);
-            Iterator<Order> iterator = list.iterator();
-            while (iterator.hasNext() && size > 0) {
-                Order limitOrder = iterator.next();
-                if (size >= limitOrder.getSize()) {
-                    size -= limitOrder.getSize();
-                    iterator.remove();
-                } else {
-                    limitOrder.setSize(limitOrder.getSize() - size);
-                    size = 0;
-                }
-
-                if (list.isEmpty()) {
-                    map.remove(price);
-                }
-
-                if (size == 0) {
-                    break;
-                }
-                else if (size < 0) {
-                    throw new IllegalArgumentException("Size cannot be negative: " + size);
-                }
-            }
-            price = Costants.ASK.equals(type) ? map.lowerKey(price) : map.higherKey(price);
-        }
-        return size;
-    }
-
-    private void checkTransaction (int size, String type) {
-        if (size > 0) {
-            orderBook.resetOrderBook(type);
-        } else if (size == 0) {
-            orderBook.updateOrderBook(type);
         }
     }
 
@@ -384,11 +334,12 @@ public class ServerThread implements Runnable {
 
             switch (values.getType()) {
                 case Costants.ASK:
-                    orderBook.addOrder(stopOrder, orderBook.getAskMap());// add order to main map
+                    orderBook.addOrder(stopOrder, orderBook.getAskMapStop());// add order to main map
                     orderBook.addOrderToMapAndUpdateJson (Costants.ASK_MAP_TEMP_STOP_FILE, stopOrder);// update temp map and json
+                    askStopOrdersExecutor.myNotify();
                     break;
-                case Costants.BID:
-                    orderBook.addOrder(stopOrder, orderBook.getBidMap());// add order to main map
+                case Costants.BID: // da aggiustare NON USARE
+                    orderBook.addOrder(stopOrder, orderBook.getBidMapStop());// add order to main map
                     orderBook.addOrderToMapAndUpdateJson (Costants.BID_MAP_TEMP_STOP_FILE, stopOrder);// update temp map and json
                     break;
                 default:

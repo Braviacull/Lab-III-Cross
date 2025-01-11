@@ -1,18 +1,1 @@
-{
-  "100": [
-    {
-      "orderId": 166,
-      "type": "ask",
-      "size": 10,
-      "price": 100,
-      "username": "alessio"
-    },
-    {
-      "orderId": 168,
-      "type": "ask",
-      "size": 10,
-      "price": 100,
-      "username": "alessio"
-    }
-  ]
-}
+{}

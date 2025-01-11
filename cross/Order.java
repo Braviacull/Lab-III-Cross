@@ -11,6 +11,7 @@ public class Order {
     private int price = -1;
     private String username;
 
+    // per marketOrder
     public Order(String type, int size, String username) {
         this.orderId = Order.nextID.getAndIncrement();
         setType(type);
@@ -18,6 +19,15 @@ public class Order {
         this.username = username;
     }
 
+    // quando uno StopOrder si trasforma in un MarketOrder voglio mantenere l'id
+    public Order(String type, int size, String username, int orderId) {
+        this.orderId = orderId;
+        setType(type);
+        this.size = size;
+        this.username = username;
+    }
+
+    // per limitOrder e StopOrder
     public Order(String type, int size, int price, String username) {
         this.orderId = Order.nextID.getAndIncrement();
         setType(type);
