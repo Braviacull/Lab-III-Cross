@@ -90,23 +90,37 @@ public class OrderBook {
         }
     }
 
+    public String reverseType (String type) {
+        switch (type) {
+            case Costants.ASK:
+                type = Costants.BID;
+                break;
+            case Costants.BID:
+                type = Costants.ASK;
+                break;
+            default:
+                throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+        }
+        return type;
+    }
+
     // Syncronised // NOT FOR STOP ORDERS
     public void resetOrderBook(String type){
         ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
         ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> mapTemp = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
         switch (type) {
             case Costants.ASK:
-                loadMapFromJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
-                loadMapFromJson(Costants.BID_MAP_FILE, map);
-                updateOrderMap(map, mapTemp);
-                setBidMap(map);
-                updateOrderBook(type);
-                break;
-            case Costants.BID:
                 loadMapFromJson(Costants.ASK_MAP_TEMP_FILE, mapTemp);
                 loadMapFromJson(Costants.ASK_MAP_FILE, map);
                 updateOrderMap(map, mapTemp);
                 setAskMap(map);
+                updateOrderBook(type);
+                break;
+            case Costants.BID:
+                loadMapFromJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
+                loadMapFromJson(Costants.BID_MAP_FILE, map);
+                updateOrderMap(map, mapTemp);
+                setBidMap(map);
                 updateOrderBook(type);
                 break;
             default:
@@ -118,12 +132,12 @@ public class OrderBook {
     public void updateOrderBook(String type){
         switch (type) {
             case Costants.ASK:
-                updateJson(Costants.BID_MAP_FILE, getBidMap());
-                updateJson(Costants.BID_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
-                break;
-            case Costants.BID:
                 updateJson(Costants.ASK_MAP_FILE, getAskMap());
                 updateJson(Costants.ASK_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
+                break;
+            case Costants.BID:
+                updateJson(Costants.BID_MAP_FILE, getBidMap());
+                updateJson(Costants.BID_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
                 break;
             default:
                 throw new IllegalArgumentException("Type must be 'ask' or 'bid'");

@@ -108,6 +108,7 @@ public class MyUtils {
     }
 
     public static void checkTransaction (int size, String type, OrderBook orderBook) {
+        type = orderBook.reverseType(type);
         if (size > 0) {
             orderBook.resetOrderBook(type);
         } else if (size == 0) {
