@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.Socket;
 
 public class ServerThread implements Runnable {
-
     private final Socket clientSocket;
     private MyProperties properties;
     private final String stopString;
@@ -23,8 +22,9 @@ public class ServerThread implements Runnable {
     private Boolean loggedIn;
     private OrderBook orderBook;
     private AskStopOrdersExecutor askStopOrdersExecutor;
+    private BidStopOrdersExecutor bidStopOrdersExecutor;
 
-    public ServerThread(Socket socket, MyProperties properties, ConcurrentHashMap<String, User> usersMap, OrderBook orderBook, Gson gson, AskStopOrdersExecutor askStopOrdersExecutor) {
+    public ServerThread(Socket socket, MyProperties properties, ConcurrentHashMap<String, User> usersMap, OrderBook orderBook, Gson gson, AskStopOrdersExecutor askStopOrdersExecutor, BidStopOrdersExecutor bidStopOrdersExecutor) {
         this.clientSocket = socket;
         this.properties = properties; 
         this.stopString = properties.getStopString();
@@ -35,6 +35,7 @@ public class ServerThread implements Runnable {
         this.loggedIn = false;
         this.orderBook = orderBook;
         this.askStopOrdersExecutor = askStopOrdersExecutor;
+        this.bidStopOrdersExecutor = bidStopOrdersExecutor;
     }
 
     private void close() {
@@ -264,6 +265,8 @@ public class ServerThread implements Runnable {
                     if (size != 0) { //transazione non provata o non riuscita
                         orderBook.addOrder(limitOrder, orderBook.getAskMap());
                         orderBook.addOrderToMapAndUpdateJson (Costants.ASK_MAP_TEMP_FILE, limitOrder); // update temp map and json
+                        // notify BidStopOrdersExecutor that might be some bidStopOrder to execute
+                        bidStopOrdersExecutor.myNotify();
                     }
                     break;
                 case Costants.BID:
@@ -274,7 +277,7 @@ public class ServerThread implements Runnable {
                     if (size != 0) {
                         orderBook.addOrder(limitOrder, orderBook.getBidMap()); // add order to main map
                         orderBook.addOrderToMapAndUpdateJson (Costants.BID_MAP_TEMP_FILE, limitOrder); // update temp map and json
-                        // notify StopOrderExecutor that might be some askStopOrder to execute
+                        // notify AskStopOrdersExecutor that might be some askStopOrder to execute
                         askStopOrdersExecutor.myNotify();
                     }
                     break;
@@ -341,6 +344,7 @@ public class ServerThread implements Runnable {
                 case Costants.BID: // da aggiustare NON USARE
                     orderBook.addOrder(stopOrder, orderBook.getBidMapStop());// add order to main map
                     orderBook.addOrderToMapAndUpdateJson (Costants.BID_MAP_TEMP_STOP_FILE, stopOrder);// update temp map and json
+                    bidStopOrdersExecutor.myNotify();
                     break;
                 default:
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");

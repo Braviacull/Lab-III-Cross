@@ -136,8 +136,8 @@ public class MyUtils {
                 System.out.println("price = " + price);
                 String username = order.getUsername();
                 System.out.println("username = " + username);
+                System.out.println("");
             }
         }
-        System.out.println("");
     }
 }
