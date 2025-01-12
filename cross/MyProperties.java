@@ -31,7 +31,7 @@ public class MyProperties {
         }
     }
 
-    public void setNextId(int next_id) {
+    public synchronized void setNextId(int next_id) {
         this.next_id = next_id;
         properties.setProperty(Costants.SERVER_NEXT_ID, Integer.toString(next_id));
         try (FileOutputStream out = new FileOutputStream(propertiesFilePath)) {

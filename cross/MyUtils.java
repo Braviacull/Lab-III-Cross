@@ -73,8 +73,8 @@ public class MyUtils {
         }
 
         ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
-        if (map.isEmpty()) {
-            return 1;
+        if (map.isEmpty() || size > orderBook.getSizeFromMap(map)) {
+            return size;
         }
 
         Integer price = Costants.ASK.equals(type) ? orderBook.getBidMarketPrice(orderBook.getBidMap()) : orderBook.getAskMarketPrice(orderBook.getAskMap()); // get market price
@@ -104,16 +104,12 @@ public class MyUtils {
             }
             price = Costants.ASK.equals(type) ? map.lowerKey(price) : map.higherKey(price);
         }
-        return size;
-    }
 
-    public static void checkTransaction (int size, String type, OrderBook orderBook) {
-        type = orderBook.reverseType(type);
-        if (size > 0) {
-            orderBook.resetOrderBook(type);
-        } else if (size == 0) {
-            orderBook.updateOrderBook(type);
+        if (size != 0) {
+            throw new IllegalStateException("size must be 0 at this point");
         }
+        
+        return size;
     }
 
     public static void printMap (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
@@ -142,24 +138,51 @@ public class MyUtils {
         }
     }
 
-    public static boolean searchAndDeleteOrderById (int idToDelete,ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map, String username) {
+    public static class Bools {
+        private boolean deleted;
+        private boolean found;
+
+        public Bools (boolean deleted, boolean found) {
+            this.deleted = deleted;
+            this.found = found;
+        }
+        
+        public boolean isDeleted () {
+            return deleted;
+        }
+        public boolean isFound () {
+            return found;
+        }
+        public void setDeleted (boolean deleted) {
+            this.deleted = deleted;
+        }
+        public void setFound (boolean found) {
+            this.found = found;
+        }
+    }
+
+    public static Bools searchAndDeleteOrderById (int idToDelete,ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map, String username) {
+        Bools res = new Bools(false, false);
         for (int price : map.keySet()) {
             ConcurrentLinkedQueue<Order> queue = map.get(price);
             for (Order order : queue) {
                 int id = order.getId();
                 if (id == idToDelete) {
                     if (!order.getUsername().equals(username)){
-                        return false;
+                        res.setFound(true); // trovato
+                        res.setDeleted(false); // ma username non corretto
+                        return res;
                     }
                     queue.remove(order);
                     if (queue.isEmpty()){
                         map.remove(price);
                     }
-                    
-                    return true;
+                    res.setFound(true); // trovato
+                    res.setDeleted(true); // ed eliminato
+                    return res;
                 } 
             }
         }
-        return false;
+        return res; // non trovato e non eliminato
     }
 }

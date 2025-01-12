@@ -9,11 +9,11 @@ import com.google.gson.reflect.TypeToken;
 
 public class OrderBook {
     private Gson gson;
+    private Type mapType;
     private ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> bidMap = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
     private ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> askMap = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
     private ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> bidMapStop = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
     private ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> askMapStop = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
-    private Type mapType;
 
     public OrderBook(Gson gson) {
         this.gson = gson;
@@ -26,34 +26,22 @@ public class OrderBook {
         loadMapFromJson(Costants.ASK_MAP_FILE, askMap);
         loadMapFromJson(Costants.BID_MAP_STOP_FILE, bidMapStop);
         loadMapFromJson(Costants.ASK_MAP_STOP_FILE, askMapStop);
+    }
 
-        // Load temporary bid and ask maps from JSON files
-        ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> bidMapTemp = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
-        ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> askMapTemp = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
-        loadMapFromJson(Costants.BID_MAP_TEMP_FILE, bidMapTemp);
-        loadMapFromJson(Costants.ASK_MAP_TEMP_FILE, askMapTemp);
-        ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> bidMapTempStop = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
-        ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> askMapTempStop = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
-        loadMapFromJson(Costants.BID_MAP_TEMP_STOP_FILE, bidMapTempStop);
-        loadMapFromJson(Costants.ASK_MAP_TEMP_STOP_FILE, askMapTempStop);
-
-        // Update main maps with temporary maps
-        updateOrderMap(bidMap, bidMapTemp);
-        updateOrderMap(askMap, askMapTemp);
-        updateOrderMap(bidMapStop, bidMapTempStop);
-        updateOrderMap(askMapStop, askMapTempStop);
-
-        // Update main jsons with main maps
-        updateJson(Costants.BID_MAP_FILE, bidMap);
-        updateJson(Costants.ASK_MAP_FILE, askMap);
-        updateJson(Costants.BID_MAP_STOP_FILE, bidMapStop);
-        updateJson(Costants.ASK_MAP_STOP_FILE, askMapStop);
-
-        // Clear temporary json maps
-        updateJson(Costants.BID_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
-        updateJson(Costants.ASK_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
-        updateJson(Costants.BID_MAP_TEMP_STOP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
-        updateJson(Costants.ASK_MAP_TEMP_STOP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
+    public String getJsonFileNameFromMap (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
+        if (map == askMap){
+            return Costants.ASK_MAP_FILE;
+        }
+        else if (map == bidMap){
+            return Costants.BID_MAP_FILE;
+        }
+        else if (map == askMapStop){
+            return Costants.ASK_MAP_STOP_FILE;
+        }
+        else if (map == bidMapStop){
+            return Costants.BID_MAP_STOP_FILE;
+        }
+        throw new IllegalArgumentException ("map not supported");
     }
 
     public int getBidMarketPrice (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
@@ -81,13 +69,14 @@ public class OrderBook {
         MyUtils.updateJson(fileName, map, gson);
     }
 
-    // Syncronised: LA SOURCEMAP NON É CONDIVISA E addLimitOrder É SYNCRONISED
-    public void updateOrderMap(ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> targetMap, ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> sourceMap) {
-        for (ConcurrentLinkedQueue<Order> list : sourceMap.values()) {
-            for (Order limitOrder : list) {
-                addOrder(limitOrder, targetMap);
+    public int getSizeFromMap (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
+        int size = 0;
+        for (int price : map.keySet()) {
+            for (Order order : map.get(price)){
+                size =+ order.getSize();
             }
         }
+        return size;
     }
 
     public String reverseType (String type) {
@@ -104,59 +93,10 @@ public class OrderBook {
         return type;
     }
 
-    // Syncronised // NOT FOR STOP ORDERS
-    public void resetOrderBook(String type){
-        ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
-        ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> mapTemp = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
-        switch (type) {
-            case Costants.ASK:
-                loadMapFromJson(Costants.ASK_MAP_TEMP_FILE, mapTemp);
-                loadMapFromJson(Costants.ASK_MAP_FILE, map);
-                updateOrderMap(map, mapTemp);
-                setAskMap(map);
-                updateOrderBook(type);
-                break;
-            case Costants.BID:
-                loadMapFromJson(Costants.BID_MAP_TEMP_FILE, mapTemp);
-                loadMapFromJson(Costants.BID_MAP_FILE, map);
-                updateOrderMap(map, mapTemp);
-                setBidMap(map);
-                updateOrderBook(type);
-                break;
-            default:
-                throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
-        }
-    }
-
-    // Syncronised // NOT FOR STOP ORDERS
-    public void updateOrderBook(String type){
-        switch (type) {
-            case Costants.ASK:
-                updateJson(Costants.ASK_MAP_FILE, getAskMap());
-                updateJson(Costants.ASK_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
-                break;
-            case Costants.BID:
-                updateJson(Costants.BID_MAP_FILE, getBidMap());
-                updateJson(Costants.BID_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
-                break;
-            default:
-                throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
-        }
-    }
-
     // Syncronised: la mappa é concorrente
     public void addOrder(Order limitOrder, ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
-        map.computeIfAbsent(limitOrder.getPrice(), k -> new ConcurrentLinkedQueue<Order>()).add(limitOrder);
+        map.computeIfAbsent(limitOrder.getPrice(), k -> new ConcurrentLinkedQueue<Order>()).add(limitOrder); 
     }
-
-    // Syncronised: chiama solamente metodi syncronised
-    public void addOrderToMapAndUpdateJson (String fileName, Order order) {
-        ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> temp = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
-        loadMapFromJson(fileName, temp);
-        addOrder(order, temp);
-        updateJson(fileName, temp);
-    }
-
     // Syncronised
     public void setAskMap(ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
         Sync.askMapLock.writeLock().lock();

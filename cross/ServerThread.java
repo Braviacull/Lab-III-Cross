@@ -2,6 +2,8 @@ package cross;
 
 import com.google.gson.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -19,7 +21,6 @@ public class ServerThread implements Runnable {
     private Gson gson;
     private ResponseStatus responseStatus;
     private ConcurrentHashMap<String, User> usersMap;
-    private ConcurrentHashMap<String, User> usersMapTemp;
     private String username;
     private Boolean loggedIn;
     private OrderBook orderBook;
@@ -32,7 +33,6 @@ public class ServerThread implements Runnable {
         this.stopString = properties.getStopString();
         this.gson = gson;
         this.usersMap = usersMap;
-        this.usersMapTemp = new ConcurrentHashMap<>();
         this.username = "";
         this.loggedIn = false;
         this.orderBook = orderBook;
@@ -128,11 +128,7 @@ public class ServerThread implements Runnable {
                 responseStatus = new ResponseStatus(102, reg);
             } else {
                 usersMap.put(user.getUsername(), user);
-
-                // Update usersMapTemp.json
-                ServerMain.loadMapFromJson(Costants.USERS_MAP_TEMP_FILE, usersMapTemp);
-                usersMapTemp.put(user.getUsername(), user);
-                ServerMain.updateJson(Costants.USERS_MAP_TEMP_FILE, usersMapTemp);
+                ServerMain.updateJson(Costants.USERS_MAP_FILE, usersMap);
 
                 responseStatus = new ResponseStatus(100, reg);
             }
@@ -170,11 +166,7 @@ public class ServerThread implements Runnable {
                 if (gson.toJson(registeredUser).equals(gson.toJson(oldUser))) {
                     User newUser = values.getNewUser();
                     usersMap.put(username, newUser);
-
-                    // Update usersMapTemp.json
-                    ServerMain.loadMapFromJson(Costants.USERS_MAP_TEMP_FILE, usersMapTemp);
-                    usersMapTemp.put(username, newUser);
-                    ServerMain.updateJson(Costants.USERS_MAP_TEMP_FILE, usersMapTemp);
+                    ServerMain.updateJson(Costants.USERS_MAP_FILE, usersMap);
 
                     responseStatus = new ResponseStatus(100, update);
                 } else {
@@ -266,24 +258,26 @@ public class ServerThread implements Runnable {
                 case Costants.ASK:
                     if (values.getPrice() <= orderBook.getBidMarketPrice(orderBook.getBidMap())) { // spread <= 0
                         size = MyUtils.transaction(values.getSize(), values.getType(), orderBook);
-                        MyUtils.checkTransaction(size, values.getType(), orderBook);
+                        if (size == 0){ // transazione riuscita
+                            orderBook.updateJson(Costants.BID_MAP_FILE, orderBook.getBidMap());
+                        }
                     }
-                    if (size != 0) { //transazione non provata o non riuscita
+                    if (size != 0) { //transazione non riuscita o non provata
                         orderBook.addOrder(limitOrder, orderBook.getAskMap());
-                        orderBook.addOrderToMapAndUpdateJson (Costants.ASK_MAP_TEMP_FILE, limitOrder); // update temp map and json
-                        // notify BidStopOrdersExecutor that might be some bidStopOrder to execute
+                        orderBook.updateJson(Costants.ASK_MAP_FILE, orderBook.getAskMap());
                         bidStopOrdersExecutor.myNotify();
                     }
                     break;
                 case Costants.BID:
                     if (values.getPrice() >= orderBook.getAskMarketPrice(orderBook.getAskMap())) { // spread <= 0
                         size = MyUtils.transaction(values.getSize(), values.getType(), orderBook);
-                        MyUtils.checkTransaction(size, values.getType(), orderBook);
+                        if (size == 0){
+                            orderBook.updateJson(Costants.ASK_MAP_FILE, orderBook.getAskMap());
+                        }
                     }
                     if (size != 0) {
                         orderBook.addOrder(limitOrder, orderBook.getBidMap()); // add order to main map
-                        orderBook.addOrderToMapAndUpdateJson (Costants.BID_MAP_TEMP_FILE, limitOrder); // update temp map and json
-                        // notify AskStopOrdersExecutor that might be some askStopOrder to execute
+                        orderBook.updateJson(Costants.BID_MAP_FILE, orderBook.getBidMap());
                         askStopOrdersExecutor.myNotify();
                     }
                     break;
@@ -309,7 +303,18 @@ public class ServerThread implements Runnable {
 
             InsertMarketOrderRequest.Values values = insertMO.getValues();
             int size = MyUtils.transaction(values.getSize(), values.getType(), orderBook);
-            MyUtils.checkTransaction(size, values.getType(), orderBook);
+            if (size == 0) {
+                switch (orderBook.reverseType(values.getType())) {
+                    case Costants.ASK:
+                        orderBook.updateJson(orderBook.getJsonFileNameFromMap(orderBook.getAskMap()), orderBook.getAskMap());
+                        break;
+                    case Costants.BID:
+                        orderBook.updateJson(orderBook.getJsonFileNameFromMap(orderBook.getBidMap()), orderBook.getBidMap());
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+                }
+            }
             sendMarketOrderIdAfterTransaction(size, values.getType());
             
         } catch (IOException e) {
@@ -343,13 +348,13 @@ public class ServerThread implements Runnable {
 
             switch (values.getType()) {
                 case Costants.ASK:
-                    orderBook.addOrder(stopOrder, orderBook.getAskMapStop());// add order to main map
-                    orderBook.addOrderToMapAndUpdateJson (Costants.ASK_MAP_TEMP_STOP_FILE, stopOrder);// update temp map and json
+                    orderBook.addOrder(stopOrder, orderBook.getAskMapStop());// add order to  map
+                    orderBook.updateJson(Costants.ASK_MAP_STOP_FILE, orderBook.getAskMapStop());
                     askStopOrdersExecutor.myNotify();
                     break;
                 case Costants.BID: // da aggiustare NON USARE
-                    orderBook.addOrder(stopOrder, orderBook.getBidMapStop());// add order to main map
-                    orderBook.addOrderToMapAndUpdateJson (Costants.BID_MAP_TEMP_STOP_FILE, stopOrder);// update temp map and json
+                    orderBook.addOrder(stopOrder, orderBook.getBidMapStop());// add order to  map
+                    orderBook.updateJson(Costants.BID_MAP_STOP_FILE, orderBook.getBidMapStop());
                     bidStopOrdersExecutor.myNotify();
                     break;
                 default:
@@ -375,40 +380,32 @@ public class ServerThread implements Runnable {
             CancelOrderRequest.Values values = cancelOrderRequest.getValues();
             int idToDelete = values.getOrderId();
             
-            boolean deleted = false;
-            ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map;
+            MyUtils.Bools bools = new MyUtils.Bools(false, false);
+            List<ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>> maps = new ArrayList<>();
+            maps.add(orderBook.getAskMap());
+            maps.add(orderBook.getBidMap());
+            maps.add(orderBook.getAskMapStop());
+            maps.add(orderBook.getBidMapStop());
 
-            if (!deleted) { // sempre vero
-                map = orderBook.getAskMap();
-                deleted = MyUtils.searchAndDeleteOrderById(idToDelete, map, username);
-                orderBook.updateJson(Costants.ASK_MAP_FILE, map);
-                orderBook.updateJson(Costants.ASK_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
-            }
-            if (!deleted) {
-                map = orderBook.getBidMap();
-                deleted = MyUtils.searchAndDeleteOrderById(idToDelete, map , username);
-                orderBook.updateJson(Costants.BID_MAP_FILE, map);
-                orderBook.updateJson(Costants.BID_MAP_TEMP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
-            }
-            if (!deleted) {
-                map = orderBook.getAskMapStop();
-                deleted = MyUtils.searchAndDeleteOrderById(idToDelete, map, username);
-                orderBook.updateJson(Costants.ASK_MAP_STOP_FILE, map);
-                orderBook.updateJson(Costants.ASK_MAP_TEMP_STOP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
-            }
-            if (!deleted) {
-                map = orderBook.getBidMapStop();
-                deleted = MyUtils.searchAndDeleteOrderById(idToDelete, map, username);
-                orderBook.updateJson(Costants.BID_MAP_STOP_FILE, map);
-                orderBook.updateJson(Costants.BID_MAP_TEMP_STOP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>());
+            for (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map : maps) {
+                if (!bools.isFound() && !bools.isDeleted()) { // non trovato e non eliminato
+                    bools = MyUtils.searchAndDeleteOrderById(idToDelete, map, username);
+                    if (bools.isFound() && bools.isDeleted()) { // trovato ed eliminato
+                        orderBook.updateJson(orderBook.getJsonFileNameFromMap(map), map);
+                        break;
+                    }
+                    if (bools.isFound() && !bools.isDeleted()){ // trovato ma username non corretto
+                        break;
+                    }
+                }
             }
 
-            // set error
-            if (!deleted) {
+            // set responseStatus
+            if (!bools.isDeleted()) { // non eliminato
                 responseStatus = new ResponseStatus(101, cancelOrderRequest);
             }
-            if (deleted) {
-                responseStatus = new ResponseStatus(100, cancelOrderRequest);
+            else { // eliminato
+                responseStatus = new ResponseStatus(101, cancelOrderRequest);
             }
 
         } catch (IOException e) {

@@ -315,15 +315,16 @@ public class ClientMain {
     }
 
     public String scanIntField(String strInt) {
+        String res = "";
         while (true) {
-            strInt = scanField(strInt); // Scan the integer field
-            if (isInt(strInt)) {
+            res = scanField(strInt); // Scan the integer field
+            if (isInt(res)) {
                 break;
             } else {
                 System.out.println("size and price must be integers"); // Size and price must be integers
             }
         }
-        return strInt;
+        return res;
     }
 
     private boolean isInt(String str) {

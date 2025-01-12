@@ -2,15 +2,11 @@ package cross;
 
 import java.util.Iterator;
 
-import com.google.gson.Gson;
-
 public class OrdersExecutor {
     public OrderBook orderBook;
-    public Gson gson;
 
-    OrdersExecutor (OrderBook orderBook, Gson gson) {
+    OrdersExecutor (OrderBook orderBook) {
         this.orderBook = orderBook;
-        this.gson = gson;
     }
 
     public void myNotify () {
@@ -31,8 +27,13 @@ public class OrdersExecutor {
     public void iterate (Iterator<Order> iterator) {
         while (iterator.hasNext()) {
             Order stopOrder = iterator.next();
-            int size = MyUtils.transaction(stopOrder.getSize(), stopOrder.getType() , orderBook);
-            MyUtils.checkTransaction(size, stopOrder.getType(), orderBook);
+            int size = MyUtils.transaction(stopOrder.getSize(), stopOrder.getType(), orderBook);
+            if (size == 0) {
+                System.out.println("stop order " + stopOrder.getId() + " ESEGUITO");
+            }
+            else {
+                System.out.println("stop order " + stopOrder.getId() + " SCARTATO");
+            }
         }
     }
 }

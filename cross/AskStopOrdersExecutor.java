@@ -4,13 +4,13 @@ import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import com.google.gson.*;
-
 public class AskStopOrdersExecutor extends OrdersExecutor implements Runnable {
     public int bidMarketPrice;
+    public ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map;
     
-    AskStopOrdersExecutor (OrderBook orderBook, Gson gson) {
-        super(orderBook, gson);
+    AskStopOrdersExecutor (OrderBook orderBook) {
+        super(orderBook);
+        map = orderBook.getAskMapStop();
     }
 
     public boolean calculateConditionToWait(Integer bidMarketPrice) {
@@ -33,13 +33,11 @@ public class AskStopOrdersExecutor extends OrdersExecutor implements Runnable {
             System.out.println("Risvegliato");
 
             if (orderBook.getAskMapStop().isEmpty()) {
-                System.err.println("map should not be empty after while condition, Wrong logic");
-                break;
+                throw new IllegalStateException("map should not be empty after while condition, Wrong logic");
             }
 
             while (!calculateConditionToWait(this.bidMarketPrice)){
-                Integer price = orderBook.getAskMarketPrice(orderBook.getAskMapStop());
-                ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map = orderBook.getAskMapStop();
+                Integer price = orderBook.getAskMarketPrice(map);
                 ConcurrentLinkedQueue<Order> queue = map.get(price);
                 Iterator<Order> iterator = queue.iterator();
                 iterate (iterator);
@@ -50,8 +48,7 @@ public class AskStopOrdersExecutor extends OrdersExecutor implements Runnable {
             MyUtils.printMap(orderBook.getAskMapStop());
             MyUtils.printMap(orderBook.getBidMap());
 
-            MyUtils.updateJson(Costants.ASK_MAP_STOP_FILE, orderBook.getAskMapStop(), gson);
-            MyUtils.updateJson(Costants.ASK_MAP_TEMP_STOP_FILE, new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> (), gson);
+            orderBook.updateJson(orderBook.getJsonFileNameFromMap(orderBook.getAskMapStop()), orderBook.getAskMapStop());
         }
     }
 }

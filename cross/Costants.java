@@ -2,6 +2,8 @@ package cross;
 
 public class Costants {
     public static final String CLIENT_PROPERTIES_FILE = "client.properties";
+
+    // operations
     public static final String REGISTER = "register";
     public static final String LOGIN = "login";
     public static final String LOGOUT = "logout";
@@ -11,6 +13,7 @@ public class Costants {
     public static final String INSERT_STOP_ORDER = "insertStopOrder";
     public static final String CANCEL_ORDER = "cancelOrder";
 
+    // types
     public static final String ASK = "ask";
     public static final String BID = "bid";
 
@@ -19,16 +22,12 @@ public class Costants {
     public static final String SERVER_STOP_STRING = "server.stop_string";
     public static final String SERVER_NEXT_ID = "server.next_id";
 
+    // supported orderbook maps
     public static final String BID_MAP_FILE = "bidMap.json";
     public static final String ASK_MAP_FILE = "askMap.json";
-    public static final String BID_MAP_TEMP_FILE = "bidMapTemp.json";
-    public static final String ASK_MAP_TEMP_FILE = "askMapTemp.json";
     public static final String BID_MAP_STOP_FILE = "bidMapStop.json";
     public static final String ASK_MAP_STOP_FILE = "askMapStop.json";
-    public static final String BID_MAP_TEMP_STOP_FILE = "bidMapTempStop.json";
-    public static final String ASK_MAP_TEMP_STOP_FILE = "askMapTempStop.json";
 
-    public static final String USERS_MAP_TEMP_FILE = "usersMapTemp.json";
     public static final String USERS_MAP_FILE = "usersMap.json";
     public static final String SERVER_PROPERTIES_FILE = "server.properties";
 }

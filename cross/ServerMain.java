@@ -19,7 +19,6 @@ public class ServerMain {
     private ServerSocket server;
     private ExecutorService connessioni;
     private ConcurrentHashMap<String, User> usersMap = new ConcurrentHashMap<String, User> ();
-    private ConcurrentHashMap<String, User> usersMapTemp = new ConcurrentHashMap<String, User> ();
     private OrderBook orderBook;
 
     public ServerMain() {
@@ -42,25 +41,21 @@ public class ServerMain {
 
     private void initializeServer() throws IOException {
         properties = new MyProperties(Costants.SERVER_PROPERTIES_FILE); // Load server properties
-
         mapType = new TypeToken<ConcurrentHashMap<String, User>>(){}.getType();
-        loadMapFromJson(Costants.USERS_MAP_TEMP_FILE, usersMapTemp); // Load temporary user map from JSON
-        loadMapFromJson(Costants.USERS_MAP_FILE, usersMap); // Load main user map from JSON
-        updateUserMap(usersMap, usersMapTemp); // Update main user map with temporary user map
 
-        updateJson(Costants.USERS_MAP_FILE, usersMap); // Save updated user map to JSON
-        updateJson(Costants.USERS_MAP_TEMP_FILE, new ConcurrentHashMap<>()); // Clear temporary user map
+        loadMapFromJson(Costants.USERS_MAP_FILE, usersMap); // Load user map from JSON
 
         orderBook = new OrderBook(gson); // Initialize order book
         
         // PRINTS
-        // MyUtils.printMap(orderBook.getAskMapStop());
-        // MyUtils.printMap(orderBook.getBidMap());
-        System.out.println("StopMap");
-        MyUtils.printMap(orderBook.getBidMapStop());
-        System.out.println("MainMap");
+        System.out.println("AskMap");
         MyUtils.printMap(orderBook.getAskMap());
-
+        System.out.println("BidMap");
+        MyUtils.printMap(orderBook.getBidMap());
+        System.out.println("AskMapStop");
+        MyUtils.printMap(orderBook.getAskMapStop());
+        System.out.println("BidMapStop");
+        MyUtils.printMap(orderBook.getBidMapStop());
 
         int nextID = properties.getNextId(); // Get next order ID from properties
         Order.setNextID(nextID); // Set next order ID
@@ -68,19 +63,13 @@ public class ServerMain {
         server = new ServerSocket(properties.getPort(), 50, InetAddress.getByName(properties.getServerIP())); // Initialize server socket
     }
 
-    private void updateUserMap(ConcurrentHashMap<String, User> targetMap, ConcurrentHashMap<String, User> sourceMap) {
-        for (User user : sourceMap.values()) {
-            targetMap.put(user.getUsername(), user); // Update main user map with users from temporary map
-        }
-    }
-
     private void acceptConnections() {
         System.out.println("Server started");
         connessioni = Executors.newCachedThreadPool(); // Initialize thread pool for handling connections
-        AskStopOrdersExecutor askStopOrdersExecutor = new AskStopOrdersExecutor(orderBook, gson);
+        AskStopOrdersExecutor askStopOrdersExecutor = new AskStopOrdersExecutor(orderBook);
         Thread threadAsk = new Thread(askStopOrdersExecutor);
         threadAsk.start();
-        BidStopOrdersExecutor bidStopOrdersExecutor = new BidStopOrdersExecutor(orderBook, gson);
+        BidStopOrdersExecutor bidStopOrdersExecutor = new BidStopOrdersExecutor(orderBook);
         Thread threadBid = new Thread(bidStopOrdersExecutor);
         threadBid.start();
         try {
