@@ -278,6 +278,7 @@ public class ClientMain {
                     case Costants.LOGOUT:
                         loggedIn.set(false);
                         automaticLogout.stop();// stop timeout
+                        automaticLogout = null;
                         break;
                     default:
                         break;
@@ -295,6 +296,7 @@ public class ClientMain {
             if (out != null) out.close(); // Close output stream
             if (in != null) in.close(); // Close input stream
             if (scanner != null) scanner.close(); // Close scanner
+            if (automaticLogout != null) automaticLogout.stop();
         } catch (IOException e) {
             System.err.println("Error closing resources: " + e.getMessage());
             e.printStackTrace();
