@@ -7,6 +7,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ClientMain {
     private MyProperties properties; // Properties object to read configuration
@@ -18,8 +19,9 @@ public class ClientMain {
 
     // for login-logout control
     private String username; // Username of the logged-in user
-    private boolean loggedIn; // Flag to check if the user is logged in
     private boolean firstTimeLogIn; // Flag to check if new user is registered
+    private AutomaticLogout automaticLogout;
+    private AtomicBoolean loggedIn = new AtomicBoolean();
 
     public ClientMain() {
         try {
@@ -32,7 +34,7 @@ public class ClientMain {
             gson = new GsonBuilder().setPrettyPrinting().create(); // Initialize Gson object
 
             username = ""; // Initialize username as empty
-            loggedIn = false; // Initialize loggedIn flag as false
+            loggedIn.set(false);
 
             sendRequests(); // Start sending requests to the server
         } catch (IOException e) {
@@ -57,49 +59,53 @@ public class ClientMain {
     private void sendRequests() throws IOException {
         String line = "";
         while (!line.equals(properties.getStopString())) {
-            if (!loggedIn) {
-                System.out.println("Possible actions: (exit, register, updateCredentials, login)");
-
-                line = scanner.nextLine();
-
-                switch (line) {
-                    case Costants.REGISTER:
-                        handleRegister();
-                        break;
-                    case Costants.UPDATE_CREDENTIALS:
-                        handleUpdateCredentials();
-                        break;
-                    case Costants.LOGIN:
-                        handleLogin();
-                        break;
-                    default:
-                        defaultBehavior(line);
-                        break;
-                }
-            } else if (loggedIn) {
+            if (loggedIn.get()) {
                 System.out.println("Possible actions: (exit, logout, insertLimitOrder, insertMarketOrder, insertStopOrder, cancelOrder)");
+            } else {
+                System.out.println("Possible actions: (exit, register, updateCredentials, login)");
+            }
 
-                line = scanner.nextLine();
+            line = scanner.nextLine();
 
-                switch (line) {
-                    case Costants.LOGOUT:
-                        handleLogout();
-                        break;
-                    case Costants.INSERT_LIMIT_ORDER:
-                        handleInsertLimitOrder();
-                        break;
-                    case Costants.INSERT_MARKET_ORDER:
-                        handleInsertMarketOrder();
-                        break;
-                    case Costants.INSERT_STOP_ORDER:
-                        handleInstertStopOrder();
-                        break;
-                    case Costants.CANCEL_ORDER:
-                        handleCancelOrder();
-                        break;
-                    default:
-                        defaultBehavior(line);
-                        break;
+            synchronized (Sync.timeOutSync) {
+                if (!loggedIn.get()){
+                    username = "";
+                    switch (line) {
+                        case Costants.REGISTER:
+                            handleRegister();
+                            break;
+                        case Costants.UPDATE_CREDENTIALS:
+                            handleUpdateCredentials();
+                            break;
+                        case Costants.LOGIN:
+                            handleLogin();
+                            break;
+                        default:
+                            defaultBehavior(line);
+                            break;
+                    }
+                } else {
+                    automaticLogout.resetTimer();
+                    switch (line) {
+                        case Costants.LOGOUT:
+                            handleLogout();
+                            break;
+                        case Costants.INSERT_LIMIT_ORDER:
+                            handleInsertLimitOrder();
+                            break;
+                        case Costants.INSERT_MARKET_ORDER:
+                            handleInsertMarketOrder();
+                            break;
+                        case Costants.INSERT_STOP_ORDER:
+                            handleInstertStopOrder();
+                            break;
+                        case Costants.CANCEL_ORDER:
+                            handleCancelOrder();
+                            break;
+                        default:
+                            defaultBehavior(line);
+                            break;
+                    }
                 }
             }
         }
@@ -154,10 +160,11 @@ public class ClientMain {
     }
 
     private void handleLogout(){
-        if (username.equals("") || !loggedIn) {
+        if (loggedIn.get()) {
+            logout(username);
+        } else {
             throw new IllegalArgumentException ("User not logged in");
         }
-        logout(username);
     }
 
     private void logout (String username) {
@@ -261,11 +268,16 @@ public class ClientMain {
                         break;
                     case Costants.LOGIN:
                         this.username = username; // Set username
-                        loggedIn = true; // Set loggedIn flag to true
+                        loggedIn.set(true);
+
+                        // start timeout
+                        automaticLogout = new AutomaticLogout(30000, in, out, gson, username, loggedIn);
+                        Thread timeouThread = new Thread(automaticLogout);
+                        timeouThread.start();
                         break;
                     case Costants.LOGOUT:
-                        this.username = ""; // Clear username
-                        loggedIn = false; // Set loggedIn flag to false
+                        loggedIn.set(false);
+                        automaticLogout.stop();// stop timeout
                         break;
                     default:
                         break;
