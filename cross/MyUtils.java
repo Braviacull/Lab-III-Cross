@@ -1,5 +1,6 @@
 package cross;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -11,7 +12,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.lang.reflect.Type;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 
 import com.google.gson.*;
 
@@ -69,11 +73,34 @@ public class MyUtils {
         }
     }
 
-    public static void sendNotification(IpPort ipPort) {
-        InetAddress ipAddress = ipPort.getIpAddress();
-        int port = ipPort.getPort();
-        System.out.println("Sending notification to client " + ipAddress + ":" + port);
-
+    public static void sendNotification(IpPort ipPort, int orderId) {
+        try {
+            InetAddress ipAddress = ipPort.getIpAddress();
+            int port = ipPort.getPort();
+            System.out.println("Sending notification to client " + ipAddress + ":" + port + " orderId: " + orderId);
+    
+            DatagramSocket ds = new DatagramSocket();
+            System.out.println("DatagramSocket created.");
+    
+            ByteArrayOutputStream bout = new ByteArrayOutputStream();
+            DataOutputStream dout = new DataOutputStream(bout);
+    
+            dout.writeInt(orderId); // Write the order ID to the output stream
+            dout.flush();
+            byte[] data = bout.toByteArray(); // Convert the output stream to a byte array
+            System.out.println("Order ID written to byte array.");
+    
+            DatagramPacket dp = new DatagramPacket(data, data.length, ipAddress, port); // Create the datagram packet
+            System.out.println("DatagramPacket created with data length: " + data.length);
+    
+            ds.send(dp); // Send the datagram packet
+            System.out.println("DatagramPacket sent.");
+    
+            ds.close(); // Close the DatagramSocket
+            System.out.println("DatagramSocket closed.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static synchronized int transaction(int size, String type, OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap) {
@@ -96,9 +123,7 @@ public class MyUtils {
                 if (size >= order.getSize()) {
                     size -= order.getSize();
                     iterator.remove();
-                    String username = order.getUsername();
-                    IpPort ipPort = userIpPortMap.get(username);
-                    sendNotification(ipPort);
+                    sendNotification(userIpPortMap.get(order.getUsername()), order.getId());
                 } else {
                     order.setSize(order.getSize() - size);
                     size = 0;

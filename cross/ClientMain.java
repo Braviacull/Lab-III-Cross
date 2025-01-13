@@ -5,6 +5,7 @@ import com.google.gson.*;
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -21,6 +22,7 @@ public class ClientMain {
     private String username; // Username of the logged-in user
     private boolean firstTimeLogIn; // Flag to check if new user is registered
     private AutomaticLogout automaticLogout;
+    private ReceiveNotification receiveNotification;
     private AtomicBoolean loggedIn = new AtomicBoolean();
 
     public ClientMain() {
@@ -270,15 +272,24 @@ public class ClientMain {
                         this.username = username; // Set username
                         loggedIn.set(true);
 
+                        // start receiving notification
+                        receiveNotification = new ReceiveNotification(InetAddress.getLoopbackAddress(), 3031);
+                        Thread receiveNotificationThread = new Thread(receiveNotification);
+                        receiveNotificationThread.start();
+                        
                         // start timeout
-                        automaticLogout = new AutomaticLogout(30000, in, out, gson, username, loggedIn);
+                        automaticLogout = new AutomaticLogout(30000, in, out, gson, username, loggedIn, receiveNotification);
                         Thread timeouThread = new Thread(automaticLogout);
                         timeouThread.start();
                         break;
                     case Costants.LOGOUT:
                         loggedIn.set(false);
+
                         automaticLogout.stop();// stop timeout
                         automaticLogout = null;
+
+                        receiveNotification.stop();
+                        receiveNotification = null;
                         break;
                     default:
                         break;

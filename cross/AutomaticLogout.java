@@ -18,13 +18,15 @@ public class AutomaticLogout implements Runnable {
     private Gson gson;
     private String username;
     private AtomicBoolean loggedIn;
-    public AutomaticLogout(long timeout, DataInputStream in, DataOutputStream out, Gson gson, String username, AtomicBoolean loggedIn) {
+    private ReceiveNotification receiveNotification;
+    public AutomaticLogout(long timeout, DataInputStream in, DataOutputStream out, Gson gson, String username, AtomicBoolean loggedIn, ReceiveNotification receiveNotification) {
         this.timeout = timeout;
         this.in = in;
         this.out = out;
         this.gson = gson;
         this.username = username;
         this.loggedIn = loggedIn;
+        this.receiveNotification = receiveNotification;
     }
 
     public void resetTimer() {
@@ -71,6 +73,8 @@ public class AutomaticLogout implements Runnable {
             String errorMessage = responseStatus.getErrorMessage(); // Get error message
             System.out.println(responseCode + " - " + errorMessage);
             loggedIn.set(false);
+            receiveNotification.stop();
+            receiveNotification = null;
             stop(); // il thread può terminare
         } catch (IOException e) {
             System.err.println("Error performing logout: " + e.getMessage());
