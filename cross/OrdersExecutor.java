@@ -30,7 +30,17 @@ public class OrdersExecutor {
     public void iterate (Iterator<Order> iterator) {
         while (iterator.hasNext()) {
             Order stopOrder = iterator.next();
-            int size = MyUtils.transaction(stopOrder.getSize(), stopOrder.getType(), orderBook, userIpPortMap);
+            int limit = 0;
+            switch (stopOrder.getType()) {
+                case Costants.ASK:
+                    break; // voglio vendere a chiunque
+                case Costants.BID:
+                    limit = Integer.MAX_VALUE; // voglio comprare da chiunque non importa se mi fa un prezzo alto
+                    break;
+                default:
+                    throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+            }
+            int size = MyUtils.transaction(stopOrder.getSize(), limit, stopOrder.getType(), orderBook, userIpPortMap);
             if (size == 0) {
                 System.out.println("stop order " + stopOrder.getId() + " ESEGUITO");
             }

@@ -265,7 +265,7 @@ public class ServerThread implements Runnable {
             switch (values.getType()) {
                 case Costants.ASK:
                     if (values.getPrice() <= orderBook.getBidMarketPrice(orderBook.getBidMap())) { // spread <= 0
-                        size = MyUtils.transaction(values.getSize(), values.getType(), orderBook, userIpPortMap);
+                        size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap);
                         if (size == 0){ // transazione riuscita
                             orderBook.updateJson(Costants.BID_MAP_FILE, orderBook.getBidMap());
                         }
@@ -278,7 +278,7 @@ public class ServerThread implements Runnable {
                     break;
                 case Costants.BID:
                     if (values.getPrice() >= orderBook.getAskMarketPrice(orderBook.getAskMap())) { // spread <= 0
-                        size = MyUtils.transaction(values.getSize(), values.getType(), orderBook, userIpPortMap);
+                        size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap);
                         if (size == 0){
                             orderBook.updateJson(Costants.ASK_MAP_FILE, orderBook.getAskMap());
                         }
@@ -310,7 +310,18 @@ public class ServerThread implements Runnable {
             }
 
             InsertMarketOrderRequest.Values values = insertMO.getValues();
-            int size = MyUtils.transaction(values.getSize(), values.getType(), orderBook, userIpPortMap);
+            
+            int limit = 0;
+            switch (values.getType()) {
+                case Costants.ASK:
+                    break; // voglio vendere a chiunque
+                case Costants.BID:
+                    limit = Integer.MAX_VALUE; // voglio comprare da chiunque non importa se mi fa un prezzo alto
+                    break;
+                default:
+                    throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+            }
+            int size = MyUtils.transaction(values.getSize(), limit, values.getType(), orderBook, userIpPortMap);
             if (size == 0) {
                 switch (orderBook.reverseType(values.getType())) {
                     case Costants.ASK:

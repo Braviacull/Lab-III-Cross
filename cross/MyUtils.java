@@ -103,14 +103,14 @@ public class MyUtils {
         }
     }
 
-    public static synchronized int transaction(int size, String type, OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap) {
+    public static synchronized int transaction(int size, int limit, String type, OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap) {
         if (!Costants.ASK.equals(type) && !Costants.BID.equals(type)) {
             throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
         }
 
         ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
-        if (map.isEmpty() || size > orderBook.getSizeFromMap(map)) {
-            System.out.println(size + "  " + orderBook.getSizeFromMap(map));
+        if (map.isEmpty() || size > orderBook.getSizeFromMap(map, limit, type)) {
+            System.out.println(size + "  " + orderBook.getSizeFromMap(map, limit, type));
             return size;
         }
 

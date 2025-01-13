@@ -278,7 +278,7 @@ public class ClientMain {
                         receiveNotificationThread.start();
                         
                         // start timeout
-                        automaticLogout = new AutomaticLogout(30000, in, out, gson, username, loggedIn, receiveNotification);
+                        automaticLogout = new AutomaticLogout(600000, in, out, gson, username, loggedIn, receiveNotification);
                         Thread timeouThread = new Thread(automaticLogout);
                         timeouThread.start();
                         break;
