@@ -5,6 +5,7 @@ import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import com.google.gson.*;
@@ -61,11 +62,16 @@ public class ServerMain {
         int nextID = properties.getNextId(); // Get next order ID from properties
         Order.setNextID(nextID); // Set next order ID
 
-        server = new ServerSocket(properties.getPort(), 50, InetAddress.getByName(properties.getServerIP())); // Initialize server socket
+        server = new ServerSocket(properties.getPort()); // Initialize server socket
     }
 
-    private void acceptConnections() {
+    private void acceptConnections(){
         System.out.println("Server started");
+        try {
+            System.out.println("ServerIP: " + InetAddress.getLocalHost().getHostAddress());
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
         connessioni = Executors.newCachedThreadPool(); // Initialize thread pool for handling connections
         AskStopOrdersExecutor askStopOrdersExecutor = new AskStopOrdersExecutor(orderBook, userIpPortMap);
         Thread threadAsk = new Thread(askStopOrdersExecutor);

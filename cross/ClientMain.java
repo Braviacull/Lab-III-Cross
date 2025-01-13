@@ -276,7 +276,7 @@ public class ClientMain {
                         loggedIn.set(true);
 
                         // start receiving notification
-                        receiveNotification = new ReceiveNotification(InetAddress.getLoopbackAddress(), 3031);
+                        receiveNotification = new ReceiveNotification(InetAddress.getLoopbackAddress(), properties.getNotificationPort());
                         Thread receiveNotificationThread = new Thread(receiveNotification);
                         receiveNotificationThread.start();
                         

@@ -28,7 +28,7 @@ public class ReceiveNotification implements Runnable {
                 socket.receive(packet); // Receive UDP packet
 
                 int orderId = extractOrderId(packet.getData());
-                System.out.println("Notification received: Order ID = " + orderId + "executed successfully");
+                System.out.println("Notification received: Order ID = " + orderId + " executed successfully");
             }
         } catch (IOException e) {
             if (running.get()) {

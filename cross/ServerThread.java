@@ -209,7 +209,7 @@ public class ServerThread implements Runnable {
                 if (gson.toJson(registeredUser).equals(gson.toJson(user))) {
                     loggedIn = true;
                     username = user.getUsername();
-                    IpPort ipPort = new IpPort(clientSocket.getInetAddress(), 3031);
+                    IpPort ipPort = new IpPort(clientSocket.getInetAddress(), properties.getNotificationPort());
                     userIpPortMap.put(username, ipPort);
                     responseStatus = new ResponseStatus(100, login);
                 } else {

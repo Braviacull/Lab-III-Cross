@@ -12,20 +12,25 @@ public class MyProperties {
     private int port;
     private String stopString;
     private int next_id;
+    private int notificationPort;
 
     public MyProperties(String fileName) {
         this.propertiesFilePath = fileName;
         properties = new Properties();
         try (FileInputStream fis = new FileInputStream(fileName)) {
             properties.load(fis);
-            
-            serverIP = properties.getProperty(Costants.SERVER_IP);
+            if (properties.getProperty(Costants.SERVER_IP) != null) {
+                serverIP = properties.getProperty(Costants.SERVER_IP);
+            }
+
             port = Integer.parseInt(properties.getProperty(Costants.SERVER_PORT));
             stopString = properties.getProperty(Costants.SERVER_STOP_STRING);
 
             if (properties.getProperty(Costants.SERVER_NEXT_ID) != null) {
                 next_id = Integer.parseInt(properties.getProperty(Costants.SERVER_NEXT_ID));
             }
+
+            notificationPort = Integer.parseInt(properties.getProperty(Costants.NOTIFICATION_PORT));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -55,5 +60,9 @@ public class MyProperties {
 
     public int getNextId() {
         return next_id;
+    }
+
+    public int getNotificationPort () {
+        return notificationPort;
     }
 }
