@@ -82,6 +82,7 @@ public class ServerMain {
         try {
             while (true) {
                 Socket clientSocket = server.accept(); // Accept client connection
+                System.out.println("ClientIP: " + clientSocket.getInetAddress().getHostAddress());
                 connessioni.execute(new ServerThread(clientSocket, properties, usersMap, userIpPortMap, orderBook, gson, askStopOrdersExecutor, bidStopOrdersExecutor)); // Handle client connection in a new thread
             }
         } catch (IOException e) {

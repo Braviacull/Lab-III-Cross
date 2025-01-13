@@ -7,6 +7,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -27,6 +28,12 @@ public class ClientMain {
 
     public ClientMain() {
         try {
+            try {
+                System.out.println("ClientIP: " + InetAddress.getLocalHost().getHostAddress());
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
+            
             properties = new MyProperties(Costants.CLIENT_PROPERTIES_FILE); // Load properties from file
 
             socket = new Socket(properties.getServerIP(), properties.getPort()); // Connect to the server
@@ -276,7 +283,15 @@ public class ClientMain {
                         loggedIn.set(true);
 
                         // start receiving notification
-                        receiveNotification = new ReceiveNotification(InetAddress.getLoopbackAddress(), properties.getNotificationPort());
+                        System.out.print(InetAddress.getLocalHost().getHostAddress() + " " + properties.getServerIP() + "\n");
+                        if (InetAddress.getLocalHost().getHostAddress().equals(properties.getServerIP())){
+                            receiveNotification = new ReceiveNotification(InetAddress.getLocalHost(), properties.getNotificationPort());
+                            System.out.print("localHostaddress\n");
+                        } else {
+                            System.out.print("loopbackaddress\n");
+                            receiveNotification = new ReceiveNotification(InetAddress.getLoopbackAddress(), properties.getNotificationPort());
+                        }
+                        
                         Thread receiveNotificationThread = new Thread(receiveNotification);
                         receiveNotificationThread.start();
                         
