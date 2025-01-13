@@ -15,7 +15,6 @@ import java.lang.reflect.Type;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketException;
 
 import com.google.gson.*;
 
@@ -73,14 +72,12 @@ public class MyUtils {
         }
     }
 
-    public static void sendNotification(IpPort ipPort, int orderId) {
+    public synchronized static void sendNotification(IpPort ipPort, int orderId) {
         try {
             InetAddress ipAddress = ipPort.getIpAddress();
             int port = ipPort.getPort();
-            System.out.println("Sending notification to client " + ipAddress + ":" + port + " orderId: " + orderId);
     
             DatagramSocket ds = new DatagramSocket();
-            System.out.println("DatagramSocket created.");
     
             ByteArrayOutputStream bout = new ByteArrayOutputStream();
             DataOutputStream dout = new DataOutputStream(bout);
@@ -88,16 +85,12 @@ public class MyUtils {
             dout.writeInt(orderId); // Write the order ID to the output stream
             dout.flush();
             byte[] data = bout.toByteArray(); // Convert the output stream to a byte array
-            System.out.println("Order ID written to byte array.");
     
             DatagramPacket dp = new DatagramPacket(data, data.length, ipAddress, port); // Create the datagram packet
-            System.out.println("DatagramPacket created with data length: " + data.length);
     
             ds.send(dp); // Send the datagram packet
-            System.out.println("DatagramPacket sent.");
     
             ds.close(); // Close the DatagramSocket
-            System.out.println("DatagramSocket closed.");
         } catch (IOException e) {
             e.printStackTrace();
         }

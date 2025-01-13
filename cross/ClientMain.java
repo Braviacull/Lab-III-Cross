@@ -50,6 +50,9 @@ public class ClientMain {
             System.out.println("Unrecognized action");
         } else {
             try {
+                if (loggedIn.get()) {
+                    handleLogout();
+                }
                 out.writeUTF(line); // Send stop command to the server
             } catch (IOException e) {
                 System.err.println("Error sending stop command: " + e.getMessage());

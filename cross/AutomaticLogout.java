@@ -59,6 +59,7 @@ public class AutomaticLogout implements Runnable {
                 }
             }
         }
+        System.out.println("timer terminato");
     }
 
     private void performLogout(){

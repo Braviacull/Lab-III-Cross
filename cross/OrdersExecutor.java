@@ -43,9 +43,11 @@ public class OrdersExecutor {
             int size = MyUtils.transaction(stopOrder.getSize(), limit, stopOrder.getType(), orderBook, userIpPortMap);
             if (size == 0) {
                 System.out.println("stop order " + stopOrder.getId() + " ESEGUITO");
+                MyUtils.sendNotification(userIpPortMap.get(stopOrder.getUsername()), stopOrder.getId());
             }
             else {
                 System.out.println("stop order " + stopOrder.getId() + " SCARTATO");
+                MyUtils.sendNotification(userIpPortMap.get(stopOrder.getUsername()), stopOrder.getId());
             }
         }
     }

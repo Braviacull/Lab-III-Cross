@@ -1,1 +1,11 @@
-{}
+{
+  "7": [
+    {
+      "orderId": 304,
+      "type": "bid",
+      "size": 5,
+      "price": 7,
+      "username": "alessio"
+    }
+  ]
+}

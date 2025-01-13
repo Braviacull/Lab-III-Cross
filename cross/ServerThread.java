@@ -424,7 +424,7 @@ public class ServerThread implements Runnable {
                 responseStatus = new ResponseStatus(101, cancelOrderRequest);
             }
             else { // eliminato
-                responseStatus = new ResponseStatus(101, cancelOrderRequest);
+                responseStatus = new ResponseStatus(100, cancelOrderRequest);
             }
 
         } catch (IOException e) {

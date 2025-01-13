@@ -112,7 +112,7 @@ public class OrderBook {
 
     // Syncronised: la mappa é concorrente
     public void addOrder(Order limitOrder, ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
-        map.computeIfAbsent(limitOrder.getPrice(), k -> new ConcurrentLinkedQueue<Order>()).add(limitOrder); 
+        map.computeIfAbsent(limitOrder.getPrice(), _ -> new ConcurrentLinkedQueue<Order>()).add(limitOrder); 
     }
     // Syncronised
     public void setAskMap(ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
