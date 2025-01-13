@@ -283,13 +283,12 @@ public class ClientMain {
                         loggedIn.set(true);
 
                         // start receiving notification
-                        System.out.print(InetAddress.getLocalHost().getHostAddress() + " " + properties.getServerIP() + "\n");
-                        if (InetAddress.getLocalHost().getHostAddress().equals(properties.getServerIP())){
-                            receiveNotification = new ReceiveNotification(InetAddress.getLocalHost(), properties.getNotificationPort());
-                            System.out.print("localHostaddress\n");
-                        } else {
+                        if (properties.getServerIP().equals(InetAddress.getLoopbackAddress().getHostAddress())){
                             System.out.print("loopbackaddress\n");
                             receiveNotification = new ReceiveNotification(InetAddress.getLoopbackAddress(), properties.getNotificationPort());
+                        } else {
+                            receiveNotification = new ReceiveNotification(InetAddress.getLocalHost(), properties.getNotificationPort());
+                            System.out.print("localHostaddress\n");
                         }
                         
                         Thread receiveNotificationThread = new Thread(receiveNotification);
