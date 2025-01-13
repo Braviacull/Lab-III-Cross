@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.lang.reflect.Type;
+import java.net.InetAddress;
 
 import com.google.gson.*;
 
@@ -69,7 +70,10 @@ public class MyUtils {
     }
 
     public static void sendNotification(IpPort ipPort) {
-        System.out.println("Sending notification to client");
+        InetAddress ipAddress = ipPort.getIpAddress();
+        int port = ipPort.getPort();
+        System.out.println("Sending notification to client " + ipAddress + ":" + port);
+
     }
 
     public static synchronized int transaction(int size, String type, OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap) {
@@ -79,6 +83,7 @@ public class MyUtils {
 
         ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
         if (map.isEmpty() || size > orderBook.getSizeFromMap(map)) {
+            System.out.println(size + "  " + orderBook.getSizeFromMap(map));
             return size;
         }
 

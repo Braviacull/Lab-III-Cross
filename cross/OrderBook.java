@@ -73,7 +73,7 @@ public class OrderBook {
         int size = 0;
         for (int price : map.keySet()) {
             for (Order order : map.get(price)){
-                size =+ order.getSize();
+                size += order.getSize();
             }
         }
         return size;
