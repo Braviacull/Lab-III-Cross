@@ -1,6 +1,7 @@
 package cross;
 
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -8,8 +9,8 @@ public class BidStopOrdersExecutor extends OrdersExecutor implements Runnable {
     public int askMarketPrice;
     public ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map;
     
-    BidStopOrdersExecutor (OrderBook orderBook) {
-        super(orderBook);
+    BidStopOrdersExecutor (OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap) {
+        super(orderBook, userIpPortMap);
         map = orderBook.getBidMapStop();
     }
 

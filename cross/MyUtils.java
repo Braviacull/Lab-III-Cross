@@ -7,6 +7,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.lang.reflect.Type;
@@ -67,7 +68,11 @@ public class MyUtils {
         }
     }
 
-    public static synchronized int transaction(int size, String type, OrderBook orderBook) {
+    public static void sendNotification(IpPort ipPort) {
+        System.out.println("Sending notification to client");
+    }
+
+    public static synchronized int transaction(int size, String type, OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap) {
         if (!Costants.ASK.equals(type) && !Costants.BID.equals(type)) {
             throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
         }
@@ -82,12 +87,15 @@ public class MyUtils {
             ConcurrentLinkedQueue<Order> queue = map.get(price);
             Iterator<Order> iterator = queue.iterator();
             while (iterator.hasNext() && size > 0) {
-                Order limitOrder = iterator.next();
-                if (size >= limitOrder.getSize()) {
-                    size -= limitOrder.getSize();
+                Order order = iterator.next();
+                if (size >= order.getSize()) {
+                    size -= order.getSize();
                     iterator.remove();
+                    String username = order.getUsername();
+                    IpPort ipPort = userIpPortMap.get(username);
+                    sendNotification(ipPort);
                 } else {
-                    limitOrder.setSize(limitOrder.getSize() - size);
+                    order.setSize(order.getSize() - size);
                     size = 0;
                 }
 

@@ -1,12 +1,15 @@
 package cross;
 
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class OrdersExecutor {
     public OrderBook orderBook;
+    private ConcurrentHashMap<String, IpPort> userIpPortMap;
 
-    OrdersExecutor (OrderBook orderBook) {
+    OrdersExecutor (OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap) {
         this.orderBook = orderBook;
+        this.userIpPortMap = userIpPortMap;
     }
 
     public void myNotify () {
@@ -27,7 +30,7 @@ public class OrdersExecutor {
     public void iterate (Iterator<Order> iterator) {
         while (iterator.hasNext()) {
             Order stopOrder = iterator.next();
-            int size = MyUtils.transaction(stopOrder.getSize(), stopOrder.getType(), orderBook);
+            int size = MyUtils.transaction(stopOrder.getSize(), stopOrder.getType(), orderBook, userIpPortMap);
             if (size == 0) {
                 System.out.println("stop order " + stopOrder.getId() + " ESEGUITO");
             }

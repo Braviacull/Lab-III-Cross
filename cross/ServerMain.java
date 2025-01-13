@@ -19,6 +19,7 @@ public class ServerMain {
     private ServerSocket server;
     private ExecutorService connessioni;
     private ConcurrentHashMap<String, User> usersMap = new ConcurrentHashMap<String, User> ();
+    private ConcurrentHashMap<String, IpPort> userIpPortMap = new ConcurrentHashMap<>();
     private OrderBook orderBook;
 
     public ServerMain() {
@@ -66,16 +67,16 @@ public class ServerMain {
     private void acceptConnections() {
         System.out.println("Server started");
         connessioni = Executors.newCachedThreadPool(); // Initialize thread pool for handling connections
-        AskStopOrdersExecutor askStopOrdersExecutor = new AskStopOrdersExecutor(orderBook);
+        AskStopOrdersExecutor askStopOrdersExecutor = new AskStopOrdersExecutor(orderBook, userIpPortMap);
         Thread threadAsk = new Thread(askStopOrdersExecutor);
         threadAsk.start();
-        BidStopOrdersExecutor bidStopOrdersExecutor = new BidStopOrdersExecutor(orderBook);
+        BidStopOrdersExecutor bidStopOrdersExecutor = new BidStopOrdersExecutor(orderBook, userIpPortMap);
         Thread threadBid = new Thread(bidStopOrdersExecutor);
         threadBid.start();
         try {
             while (true) {
                 Socket clientSocket = server.accept(); // Accept client connection
-                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, orderBook, gson, askStopOrdersExecutor, bidStopOrdersExecutor)); // Handle client connection in a new thread
+                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, userIpPortMap, orderBook, gson, askStopOrdersExecutor, bidStopOrdersExecutor)); // Handle client connection in a new thread
             }
         } catch (IOException e) {
             System.err.println("Error accepting connections: " + e.getMessage());
