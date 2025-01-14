@@ -1,15 +1,20 @@
 package cross;
 
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.google.gson.Gson;
 
 public class OrdersExecutor {
     public OrderBook orderBook;
     private ConcurrentHashMap<String, IpPort> userIpPortMap;
+    private Gson gson;
 
-    OrdersExecutor (OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap) {
+    OrdersExecutor (OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap, Gson gson) {
         this.orderBook = orderBook;
         this.userIpPortMap = userIpPortMap;
+        this.gson = gson;
     }
 
     public void myNotify () {
@@ -40,14 +45,15 @@ public class OrdersExecutor {
                 default:
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
-            int size = MyUtils.transaction(stopOrder.getSize(), limit, stopOrder.getType(), orderBook, userIpPortMap);
+            int size = MyUtils.transaction(stopOrder.getSize(), limit, stopOrder.getType(), orderBook, userIpPortMap, gson);
             if (size == 0) {
                 System.out.println("stop order " + stopOrder.getId() + " ESEGUITO");
-                MyUtils.sendNotification(userIpPortMap.get(stopOrder.getUsername()), stopOrder.getId());
+                Trades trade = new Trades(stopOrder.getId(), stopOrder.getType(), Costants.STOP, stopOrder.getSize(), stopOrder.getPrice(), (int) Instant.now().getEpochSecond());
+                MyUtils.sendNotification(userIpPortMap.get(stopOrder.getUsername()), new Notification(trade), gson);
             }
             else {
                 System.out.println("stop order " + stopOrder.getId() + " SCARTATO");
-                MyUtils.sendNotification(userIpPortMap.get(stopOrder.getUsername()), stopOrder.getId());
+                // viene notificata solamente l'avvenuta esecuzione
             }
         }
     }

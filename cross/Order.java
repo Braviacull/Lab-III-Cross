@@ -73,7 +73,18 @@ public class Order {
     }
 
     public int getPrice () {
-        return price;
+        if (price != -1) {
+            return price;
+        } else {
+            switch (type) {
+                case Costants.ASK:
+                    return 0;
+                case Costants.BID:
+                    return Integer.MAX_VALUE;
+                default:
+                    throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+            }
+        }
     }
 
     public String getUsername () {

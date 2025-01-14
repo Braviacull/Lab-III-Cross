@@ -13,6 +13,12 @@ public class Costants {
     public static final String INSERT_STOP_ORDER = "insertStopOrder";
     public static final String CANCEL_ORDER = "cancelOrder";
 
+    public static final String CLOSED_TRADES = "closedTrades";
+
+    public static final String LIMIT = "limit";
+    public static final String MARKET = "market";
+    public static final String STOP = "stop";
+
     // types
     public static final String ASK = "ask";
     public static final String BID = "bid";

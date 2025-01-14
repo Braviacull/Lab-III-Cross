@@ -73,10 +73,10 @@ public class ServerMain {
             e.printStackTrace();
         }
         connessioni = Executors.newCachedThreadPool(); // Initialize thread pool for handling connections
-        AskStopOrdersExecutor askStopOrdersExecutor = new AskStopOrdersExecutor(orderBook, userIpPortMap);
+        AskStopOrdersExecutor askStopOrdersExecutor = new AskStopOrdersExecutor(orderBook, userIpPortMap, gson);
         Thread threadAsk = new Thread(askStopOrdersExecutor);
         threadAsk.start();
-        BidStopOrdersExecutor bidStopOrdersExecutor = new BidStopOrdersExecutor(orderBook, userIpPortMap);
+        BidStopOrdersExecutor bidStopOrdersExecutor = new BidStopOrdersExecutor(orderBook, userIpPortMap, gson);
         Thread threadBid = new Thread(bidStopOrdersExecutor);
         threadBid.start();
         try {

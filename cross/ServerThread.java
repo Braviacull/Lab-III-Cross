@@ -11,6 +11,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.time.Instant;
 
 public class ServerThread implements Runnable {
     private final Socket clientSocket;
@@ -265,7 +266,7 @@ public class ServerThread implements Runnable {
             switch (values.getType()) {
                 case Costants.ASK:
                     if (values.getPrice() <= orderBook.getBidMarketPrice(orderBook.getBidMap())) { // spread <= 0
-                        size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap);
+                        size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap, gson);
                         if (size == 0){ // transazione riuscita
                             orderBook.updateJson(Costants.BID_MAP_FILE, orderBook.getBidMap());
                         }
@@ -278,7 +279,7 @@ public class ServerThread implements Runnable {
                     break;
                 case Costants.BID:
                     if (values.getPrice() >= orderBook.getAskMarketPrice(orderBook.getAskMap())) { // spread <= 0
-                        size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap);
+                        size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap, gson);
                         if (size == 0){
                             orderBook.updateJson(Costants.ASK_MAP_FILE, orderBook.getAskMap());
                         }
@@ -321,7 +322,7 @@ public class ServerThread implements Runnable {
                 default:
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
-            int size = MyUtils.transaction(values.getSize(), limit, values.getType(), orderBook, userIpPortMap);
+            int size = MyUtils.transaction(values.getSize(), limit, values.getType(), orderBook, userIpPortMap, gson);
             if (size == 0) {
                 switch (orderBook.reverseType(values.getType())) {
                     case Costants.ASK:
@@ -348,6 +349,8 @@ public class ServerThread implements Runnable {
             Order marketOrder = new Order(type, size, username);
             properties.setNextId(Order.getNextId());
             MyUtils.sendOrderId(marketOrder.getId(), out);
+            Trades trade = new Trades(marketOrder.getId(), marketOrder.getType(), Costants.MARKET, marketOrder.getSize(), (int) Instant.now().getEpochSecond());
+            MyUtils.sendNotification(userIpPortMap.get(marketOrder.getUsername()), new Notification(trade), gson);
         } else {
             throw new IllegalArgumentException ("size must not be negative, SIZE: " + size);
         }

@@ -27,8 +27,8 @@ public class ReceiveNotification implements Runnable {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 socket.receive(packet); // Receive UDP packet
 
-                int orderId = extractOrderId(packet.getData());
-                System.out.println("Notification received: Order ID = " + orderId + " executed successfully");
+                String json = new String(packet.getData(), 0, packet.getLength(), "UTF-8"); // Convert byte array to string
+                System.out.println("Notification received: " + json);
             }
         } catch (IOException e) {
             if (running.get()) {
@@ -44,11 +44,5 @@ public class ReceiveNotification implements Runnable {
         if (socket != null && !socket.isClosed()) {
             socket.close(); // Close the DatagramSocket to interrupt the blocking receive call
         }
-    }
-
-    private int extractOrderId(byte[] data) {
-        // Assuming the order ID is an integer at the beginning of the data array
-        int orderId = ((data[0] & 0xFF) << 24) | ((data[1] & 0xFF) << 16) | ((data[2] & 0xFF) << 8) | (data[3] & 0xFF);
-        return orderId;
     }
 }

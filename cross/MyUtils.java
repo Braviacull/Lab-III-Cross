@@ -1,6 +1,5 @@
 package cross;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -15,6 +14,7 @@ import java.lang.reflect.Type;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.time.Instant;
 
 import com.google.gson.*;
 
@@ -72,31 +72,31 @@ public class MyUtils {
         }
     }
 
-    public synchronized static void sendNotification(IpPort ipPort, int orderId) {
+    public synchronized static void sendNotification(IpPort ipPort, Notification notification, Gson gson) {
         try {
             InetAddress ipAddress = ipPort.getIpAddress();
             int port = ipPort.getPort();
     
+            String json = gson.toJson(notification);
+            System.out.println("Sending JSON: " + json);
+    
             DatagramSocket ds = new DatagramSocket();
     
-            ByteArrayOutputStream bout = new ByteArrayOutputStream();
-            DataOutputStream dout = new DataOutputStream(bout);
-    
-            dout.writeInt(orderId); // Write the order ID to the output stream
-            dout.flush();
-            byte[] data = bout.toByteArray(); // Convert the output stream to a byte array
+            byte[] data = json.getBytes("UTF-8"); // Convert the JSON string to a byte array
     
             DatagramPacket dp = new DatagramPacket(data, data.length, ipAddress, port); // Create the datagram packet
     
             ds.send(dp); // Send the datagram packet
+            System.out.println("DatagramPacket sent.");
     
             ds.close(); // Close the DatagramSocket
+            System.out.println("DatagramSocket closed.");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static synchronized int transaction(int size, int limit, String type, OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap) {
+    public static synchronized int transaction(int size, int limit, String type, OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap, Gson gson) {
         if (!Costants.ASK.equals(type) && !Costants.BID.equals(type)) {
             throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
         }
@@ -116,7 +116,8 @@ public class MyUtils {
                 if (size >= order.getSize()) {
                     size -= order.getSize();
                     iterator.remove();
-                    sendNotification(userIpPortMap.get(order.getUsername()), order.getId());
+                    Trades trade = new Trades(order.getId(), order.getType(), Costants.LIMIT, order.getSize(), order.getPrice(), (int) Instant.now().getEpochSecond());
+                    sendNotification(userIpPortMap.get(order.getUsername()), new Notification(trade), gson);
                 } else {
                     order.setSize(order.getSize() - size);
                     size = 0;
