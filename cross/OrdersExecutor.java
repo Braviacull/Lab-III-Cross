@@ -48,7 +48,7 @@ public class OrdersExecutor {
             int size = MyUtils.transaction(stopOrder.getSize(), limit, stopOrder.getType(), orderBook, userIpPortMap, gson);
             if (size == 0) {
                 System.out.println("stop order " + stopOrder.getId() + " ESEGUITO");
-                Trades trade = new Trades(stopOrder.getId(), stopOrder.getType(), Costants.STOP, stopOrder.getSize(), stopOrder.getPrice(), (int) Instant.now().getEpochSecond());
+                Trade trade = new Trade(stopOrder.getId(), stopOrder.getType(), Costants.STOP, stopOrder.getSize(), stopOrder.getPrice(), (int) Instant.now().getEpochSecond());
                 MyUtils.sendNotification(userIpPortMap.get(stopOrder.getUsername()), new Notification(trade), gson);
             }
             else {

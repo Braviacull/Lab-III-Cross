@@ -28,8 +28,9 @@ public class ServerThread implements Runnable {
     private OrderBook orderBook;
     private AskStopOrdersExecutor askStopOrdersExecutor;
     private BidStopOrdersExecutor bidStopOrdersExecutor;
+    private ConcurrentLinkedQueue<Trade> storicoOrdini;
 
-    public ServerThread(Socket socket, MyProperties properties, ConcurrentHashMap<String, User> usersMap, ConcurrentHashMap<String, IpPort> userIpPortMap, OrderBook orderBook, Gson gson, AskStopOrdersExecutor askStopOrdersExecutor, BidStopOrdersExecutor bidStopOrdersExecutor) {
+    public ServerThread(Socket socket, MyProperties properties, ConcurrentHashMap<String, User> usersMap, ConcurrentHashMap<String, IpPort> userIpPortMap, OrderBook orderBook, Gson gson, AskStopOrdersExecutor askStopOrdersExecutor, BidStopOrdersExecutor bidStopOrdersExecutor, ConcurrentLinkedQueue<Trade> storicoOrdini) {
         this.clientSocket = socket;
         this.properties = properties; 
         this.stopString = properties.getStopString();
@@ -41,6 +42,7 @@ public class ServerThread implements Runnable {
         this.orderBook = orderBook;
         this.askStopOrdersExecutor = askStopOrdersExecutor;
         this.bidStopOrdersExecutor = bidStopOrdersExecutor;
+        this.storicoOrdini = storicoOrdini;
     }
 
     private void close() {
@@ -262,6 +264,12 @@ public class ServerThread implements Runnable {
             InsertLimitOrderRequest.Values values = insertLO.getValues();
             Order limitOrder = new Order(values.getType(), values.getSize(), values.getPrice(), username);
 
+            int timestamp = (int) Instant.now().getEpochSecond();
+            Trade trade = new Trade(limitOrder.getId(), limitOrder.getType(), Costants.LIMIT, limitOrder.getSize(), limitOrder.getPrice(), timestamp);
+            storicoOrdini.add(trade);
+
+            StoricoOrdini.updateJson(Costants.STORICO_ORDINI_TEMP, storicoOrdini);
+
             int size = 1;
             switch (values.getType()) {
                 case Costants.ASK:
@@ -349,7 +357,7 @@ public class ServerThread implements Runnable {
             Order marketOrder = new Order(type, size, username);
             properties.setNextId(Order.getNextId());
             MyUtils.sendOrderId(marketOrder.getId(), out);
-            Trades trade = new Trades(marketOrder.getId(), marketOrder.getType(), Costants.MARKET, marketOrder.getSize(), (int) Instant.now().getEpochSecond());
+            Trade trade = new Trade(marketOrder.getId(), marketOrder.getType(), Costants.MARKET, marketOrder.getSize(), (int) Instant.now().getEpochSecond());
             MyUtils.sendNotification(userIpPortMap.get(marketOrder.getUsername()), new Notification(trade), gson);
         } else {
             throw new IllegalArgumentException ("size must not be negative, SIZE: " + size);

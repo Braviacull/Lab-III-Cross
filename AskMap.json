@@ -1,1 +1,83 @@
-{}
+{
+  "1": [
+    {
+      "orderId": 349,
+      "type": "ask",
+      "size": 1,
+      "price": 1,
+      "username": "1"
+    },
+    {
+      "orderId": 350,
+      "type": "ask",
+      "size": 1,
+      "price": 1,
+      "username": "1"
+    },
+    {
+      "orderId": 351,
+      "type": "ask",
+      "size": 1,
+      "price": 1,
+      "username": "1"
+    },
+    {
+      "orderId": 352,
+      "type": "ask",
+      "size": 1,
+      "price": 1,
+      "username": "alessio"
+    },
+    {
+      "orderId": 353,
+      "type": "ask",
+      "size": 1,
+      "price": 1,
+      "username": "1"
+    },
+    {
+      "orderId": 354,
+      "type": "ask",
+      "size": 1,
+      "price": 1,
+      "username": "1"
+    },
+    {
+      "orderId": 355,
+      "type": "ask",
+      "size": 1,
+      "price": 1,
+      "username": "alessio"
+    }
+  ],
+  "10": [
+    {
+      "orderId": 345,
+      "type": "ask",
+      "size": 10,
+      "price": 10,
+      "username": "alessio"
+    },
+    {
+      "orderId": 346,
+      "type": "ask",
+      "size": 10,
+      "price": 10,
+      "username": "alessio"
+    },
+    {
+      "orderId": 347,
+      "type": "ask",
+      "size": 10,
+      "price": 10,
+      "username": "alessio"
+    },
+    {
+      "orderId": 348,
+      "type": "ask",
+      "size": 10,
+      "price": 10,
+      "username": "alessio"
+    }
+  ]
+}

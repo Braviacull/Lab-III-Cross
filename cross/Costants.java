@@ -38,4 +38,7 @@ public class Costants {
 
     public static final String USERS_MAP_FILE = "usersMap.json";
     public static final String SERVER_PROPERTIES_FILE = "server.properties";
+
+    public static final String STORICO_ORDINI = "storicoOrdini.json";
+    public static final String STORICO_ORDINI_TEMP = "storicoOrdiniTemp.json";
 }

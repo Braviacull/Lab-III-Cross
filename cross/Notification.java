@@ -2,10 +2,10 @@ package cross;
 
 public class Notification {
     private String notification;
-    private Trades trades;
+    private Trade Trade;
 
-    public Notification (Trades trades) {
+    public Notification (Trade Trade) {
         notification = Costants.CLOSED_TRADES;
-        this.trades = trades;
+        this.Trade = Trade;
     }
 }

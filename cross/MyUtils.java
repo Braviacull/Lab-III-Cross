@@ -116,7 +116,7 @@ public class MyUtils {
                 if (size >= order.getSize()) {
                     size -= order.getSize();
                     iterator.remove();
-                    Trades trade = new Trades(order.getId(), order.getType(), Costants.LIMIT, order.getSize(), order.getPrice(), (int) Instant.now().getEpochSecond());
+                    Trade trade = new Trade(order.getId(), order.getType(), Costants.LIMIT, order.getSize(), order.getPrice(), (int) Instant.now().getEpochSecond());
                     sendNotification(userIpPortMap.get(order.getUsername()), new Notification(trade), gson);
                 } else {
                     order.setSize(order.getSize() - size);

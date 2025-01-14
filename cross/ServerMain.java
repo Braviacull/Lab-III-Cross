@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ServerMain {
 
@@ -22,6 +23,7 @@ public class ServerMain {
     private ConcurrentHashMap<String, User> usersMap = new ConcurrentHashMap<String, User> ();
     private ConcurrentHashMap<String, IpPort> userIpPortMap = new ConcurrentHashMap<>();
     private OrderBook orderBook;
+    ConcurrentLinkedQueue<Trade> storicoOrdini = new ConcurrentLinkedQueue<>();
 
     public ServerMain() {
         try {
@@ -48,16 +50,8 @@ public class ServerMain {
         loadMapFromJson(Costants.USERS_MAP_FILE, usersMap); // Load user map from JSON
 
         orderBook = new OrderBook(gson); // Initialize order book
-        
-        // PRINTS
-        System.out.println("AskMap");
-        MyUtils.printMap(orderBook.getAskMap());
-        System.out.println("BidMap");
-        MyUtils.printMap(orderBook.getBidMap());
-        System.out.println("AskMapStop");
-        MyUtils.printMap(orderBook.getAskMapStop());
-        System.out.println("BidMapStop");
-        MyUtils.printMap(orderBook.getBidMapStop());
+
+        StoricoOrdini.loadStoricoOrdini(Costants.STORICO_ORDINI, storicoOrdini);
 
         int nextID = properties.getNextId(); // Get next order ID from properties
         Order.setNextID(nextID); // Set next order ID
@@ -83,7 +77,7 @@ public class ServerMain {
             while (true) {
                 Socket clientSocket = server.accept(); // Accept client connection
                 System.out.println("ClientIP: " + clientSocket.getInetAddress().getHostAddress());
-                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, userIpPortMap, orderBook, gson, askStopOrdersExecutor, bidStopOrdersExecutor)); // Handle client connection in a new thread
+                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, userIpPortMap, orderBook, gson, askStopOrdersExecutor, bidStopOrdersExecutor, storicoOrdini)); // Handle client connection in a new thread
             }
         } catch (IOException e) {
             System.err.println("Error accepting connections: " + e.getMessage());
