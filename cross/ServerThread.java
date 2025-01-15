@@ -16,36 +16,36 @@ import java.time.Instant;
 
 public class ServerThread implements Runnable {
     private final Socket clientSocket;
-    private MyProperties properties;
-    private final String stopString;
-    private DataInputStream in;
-    private DataOutputStream out;
-    private Gson gson;
-    private ResponseStatus responseStatus;
-    private ConcurrentHashMap<String, User> usersMap;
-    private ConcurrentHashMap<String, IpPort> userIpPortMap;
-    private String username;
-    private Boolean loggedIn;
-    private OrderBook orderBook;
     private AskStopOrdersExecutor askStopOrdersExecutor;
     private BidStopOrdersExecutor bidStopOrdersExecutor;
+    private MyProperties properties;
+    private final String stopString;
+    private Gson gson;
+    private ConcurrentHashMap<String, User> usersMap;
+    private ConcurrentHashMap<String, IpPort> userIpPortMap;
+    private OrderBook orderBook;
     private ConcurrentLinkedQueue<Trade> storicoOrdini;
     private AtomicInteger workingThreads;
+    private Boolean loggedIn;
+    private String username;
+    private DataInputStream in;
+    private DataOutputStream out;
+    private ResponseStatus responseStatus;
 
-    public ServerThread(Socket socket, MyProperties properties, ConcurrentHashMap<String, User> usersMap, ConcurrentHashMap<String, IpPort> userIpPortMap, OrderBook orderBook, Gson gson, AskStopOrdersExecutor askStopOrdersExecutor, BidStopOrdersExecutor bidStopOrdersExecutor, ConcurrentLinkedQueue<Trade> storicoOrdini, AtomicInteger workingThreads) {
+    public ServerThread(Socket socket, AskStopOrdersExecutor askStopOrdersExecutor, BidStopOrdersExecutor bidStopOrdersExecutor, ServerMain serverMain) {
         this.clientSocket = socket;
-        this.properties = properties; 
-        this.stopString = properties.getStopString();
-        this.gson = gson;
-        this.usersMap = usersMap;
-        this.userIpPortMap = userIpPortMap;
-        this.username = "";
-        this.loggedIn = false;
-        this.orderBook = orderBook;
         this.askStopOrdersExecutor = askStopOrdersExecutor;
         this.bidStopOrdersExecutor = bidStopOrdersExecutor;
-        this.storicoOrdini = storicoOrdini;
-        this.workingThreads = workingThreads;
+        this.properties = serverMain.getProperties(); 
+        this.stopString = properties.getStopString();
+        this.gson = serverMain.getGson();
+        this.usersMap = serverMain.getUsersMap();
+        this.userIpPortMap = serverMain.getUserIpPortMap();
+        this.orderBook = serverMain.getOrderBook();
+        this.storicoOrdini = serverMain.getStoricoOrdini();
+        this.workingThreads = serverMain.getWorkingThreads();
+        this.username = "";
+        this.loggedIn = false;
     }
 
     private void close() {
@@ -61,8 +61,6 @@ public class ServerThread implements Runnable {
 
     public void run() {
         try {
-            System.out.println("Server listening");
-
             in = new DataInputStream(clientSocket.getInputStream());
             out = new DataOutputStream(clientSocket.getOutputStream());
 
@@ -117,7 +115,11 @@ public class ServerThread implements Runnable {
                 break;
             default:
                 if (operation.equals(stopString)) {
-                    System.out.println("Client disconnected");
+                    if (loggedIn){
+                        System.out.println(username + " disconnected");
+                    } else {
+                        System.out.println("Client disconnected");
+                    }
                 } else {
                     throw new IllegalArgumentException("Invalid operation: " + operation);
                 }
@@ -130,6 +132,11 @@ public class ServerThread implements Runnable {
             String json = in.readUTF();
             RegistrationRequest reg = gson.fromJson(json, RegistrationRequest.class);
 
+            if (loggedIn) {
+                responseStatus = new ResponseStatus(103, reg);
+                return;
+            }
+
             if (!Costants.REGISTER.equals(reg.getOperation())) {
                 throw new IllegalArgumentException("Invalid operation: " + reg.getOperation());
             }
@@ -141,7 +148,6 @@ public class ServerThread implements Runnable {
                 responseStatus = new ResponseStatus(102, reg);
             } else {
                 usersMap.put(user.getUsername(), user);
-
                 responseStatus = new ResponseStatus(100, reg);
             }
         } catch (IOException e) {
@@ -165,7 +171,7 @@ public class ServerThread implements Runnable {
 
             UpdateCredentialsRequest.Values values = update.getValues();
 
-            if (values.comparePasswords()) {
+            if (values.arePasswordsEquals()) {
                 responseStatus = new ResponseStatus(103, update);
                 return;
             }
@@ -178,7 +184,6 @@ public class ServerThread implements Runnable {
                 if (gson.toJson(registeredUser).equals(gson.toJson(oldUser))) {
                     User newUser = values.getNewUser();
                     usersMap.put(username, newUser);
-
                     responseStatus = new ResponseStatus(100, update);
                 } else {
                     responseStatus = new ResponseStatus(102, update);
@@ -197,7 +202,7 @@ public class ServerThread implements Runnable {
             LoginRequest login = gson.fromJson(json, LoginRequest.class);
 
             if (loggedIn) {
-                responseStatus = new ResponseStatus(102, login);
+                responseStatus = new ResponseStatus(104, login);
                 return;
             }
 
@@ -215,9 +220,11 @@ public class ServerThread implements Runnable {
                 if (gson.toJson(registeredUser).equals(gson.toJson(user))) {
                     loggedIn = true;
                     username = user.getUsername();
+                    responseStatus = new ResponseStatus(100, login);
+
+                    // rendo il client raggiungibile per le notifiche
                     IpPort ipPort = new IpPort(clientSocket.getInetAddress(), properties.getNotificationPort());
                     userIpPortMap.put(username, ipPort);
-                    responseStatus = new ResponseStatus(100, login);
                 } else {
                     responseStatus = new ResponseStatus(101, login);
                 }
@@ -244,9 +251,10 @@ public class ServerThread implements Runnable {
 
             if (this.username.equals(username)) {
                 loggedIn = false;
-                userIpPortMap.remove(username);
                 this.username = "";
                 responseStatus = new ResponseStatus(100, logout);
+                
+                userIpPortMap.remove(username); // il client non é più raggiungibile per le notifiche
             } else {
                 responseStatus = new ResponseStatus(101, logout);
             }
@@ -260,6 +268,10 @@ public class ServerThread implements Runnable {
             String json = in.readUTF();
             InsertLimitOrderRequest insertLO = gson.fromJson(json, InsertLimitOrderRequest.class);
 
+            if (!loggedIn) {
+                MyUtils.sendOrderId(-1, out);
+            }
+
             if (!Costants.INSERT_LIMIT_ORDER.equals(insertLO.getOperation())) {
                 throw new IllegalArgumentException("Invalid operation: " + insertLO.getOperation());
             }
@@ -267,40 +279,34 @@ public class ServerThread implements Runnable {
             InsertLimitOrderRequest.Values values = insertLO.getValues();
             Order limitOrder = new Order(values.getType(), values.getSize(), values.getPrice(), username);
 
-            int timestamp = (int) Instant.now().getEpochSecond();
-            Trade trade = new Trade(limitOrder.getId(), limitOrder.getType(), Costants.LIMIT, limitOrder.getSize(), limitOrder.getPrice(), timestamp);
+            Trade trade = new Trade(limitOrder.getId(), limitOrder.getType(), Costants.LIMIT, limitOrder.getSize(), limitOrder.getPrice(), (int) Instant.now().getEpochSecond());
             storicoOrdini.add(trade);
-
 
             int size = 1;
             switch (values.getType()) {
                 case Costants.ASK:
                     if (values.getPrice() <= orderBook.getBidMarketPrice(orderBook.getBidMap())) { // spread <= 0
                         size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap, gson);
-                        if (size == 0){ // transazione riuscita
-                        }
                     }
-                    if (size != 0) { //transazione non riuscita o non provata
+                    if (size != 0) { // transazione immediata non riuscita
                         orderBook.addOrder(limitOrder, orderBook.getAskMap());
-                        bidStopOrdersExecutor.myNotify();
+                        bidStopOrdersExecutor.notifyOrdersExecutor();
                     }
                     break;
                 case Costants.BID:
                     if (values.getPrice() >= orderBook.getAskMarketPrice(orderBook.getAskMap())) { // spread <= 0
                         size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap, gson);
-                        if (size == 0){
-                        }
                     }
-                    if (size != 0) {
-                        orderBook.addOrder(limitOrder, orderBook.getBidMap()); // add order to main map
-                        askStopOrdersExecutor.myNotify();
+                    if (size != 0) { // transazione immediata non riuscita
+                        orderBook.addOrder(limitOrder, orderBook.getBidMap());
+                        askStopOrdersExecutor.notifyOrdersExecutor();
                     }
                     break;
                 default:
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
 
-            properties.setNextId(Order.getNextId());
+            properties.setNextId(Order.getNextId()); // syncronised
             MyUtils.sendOrderId(limitOrder.getId(), out);
         } catch (IOException e) {
             System.err.println("Error during insertLimitOrder: " + e.getMessage());
@@ -312,52 +318,49 @@ public class ServerThread implements Runnable {
             String json = in.readUTF();
             InsertMarketOrderRequest insertMO = gson.fromJson(json, InsertMarketOrderRequest.class);
 
+            if (!loggedIn) {
+                MyUtils.sendOrderId(-1, out);
+            }
+
             if (!Costants.INSERT_MARKET_ORDER.equals(insertMO.getOperation())) {
                 throw new IllegalArgumentException("Invalid operation: " + insertMO.getOperation());
             }
 
             InsertMarketOrderRequest.Values values = insertMO.getValues();
             
-            int limit = 0;
+            int limit;
             switch (values.getType()) {
                 case Costants.ASK:
-                    break; // voglio vendere a chiunque
+                    limit = 0; //voglio vendere a chiunque
+                    break;
                 case Costants.BID:
                     limit = Integer.MAX_VALUE; // voglio comprare da chiunque non importa se mi fa un prezzo alto
                     break;
                 default:
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
+            
             int size = MyUtils.transaction(values.getSize(), limit, values.getType(), orderBook, userIpPortMap, gson);
-            if (size == 0) {
-                switch (orderBook.reverseType(values.getType())) {
-                    case Costants.ASK:
-                        break;
-                    case Costants.BID:
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
-                }
-            }
+
             Order marketOrder = new Order(values.getType(), values.getSize(), username);
-            int timestamp = (int) Instant.now().getEpochSecond();
-            Trade trade = new Trade(marketOrder.getId(), marketOrder.getType(), Costants.MARKET, marketOrder.getSize(), timestamp);
+            Trade trade = new Trade(marketOrder.getId(), marketOrder.getType(), Costants.MARKET, marketOrder.getSize(), (int) Instant.now().getEpochSecond());
             storicoOrdini.add(trade);
-            sendMarketOrderIdAfterTransaction(size, values.getType(), marketOrder, trade);
+
+            if (size > 0) {
+                System.out.println("Market Order SCARTATO");
+
+                MyUtils.sendOrderId(-1, out);
+            } else if (size == 0) {
+                System.out.println("Market Order ESEGUITO");
+
+                properties.setNextId(Order.getNextId());
+                MyUtils.sendOrderId(marketOrder.getId(), out);
+                MyUtils.sendNotification(userIpPortMap.get(marketOrder.getUsername()), new Notification(trade), gson);
+            } else {
+                throw new IllegalArgumentException ("size must not be negative, SIZE: " + size);
+            }
         } catch (IOException e) {
             System.err.println("Error during insertMarketOrder: " + e.getMessage());
-        }
-    }
-
-    private void sendMarketOrderIdAfterTransaction (int size, String type, Order marketOrder, Trade trade) {
-        if (size > 0) {
-            MyUtils.sendOrderId(-1, out);
-        } else if (size == 0) {
-            properties.setNextId(Order.getNextId());
-            MyUtils.sendOrderId(marketOrder.getId(), out);         
-            MyUtils.sendNotification(userIpPortMap.get(marketOrder.getUsername()), new Notification(trade), gson);
-        } else {
-            throw new IllegalArgumentException ("size must not be negative, SIZE: " + size);
         }
     }
 
@@ -366,6 +369,10 @@ public class ServerThread implements Runnable {
             String json = in.readUTF();
             InsertStopOrderRequest insertSO = gson.fromJson(json, InsertStopOrderRequest.class);
 
+            if (!loggedIn) {
+                MyUtils.sendOrderId(-1, out);
+            }
+
             if (!Costants.INSERT_STOP_ORDER.equals(insertSO.getOperation())) {
                 throw new IllegalArgumentException("Invalid operation: " + insertSO.getOperation());
             }
@@ -373,18 +380,17 @@ public class ServerThread implements Runnable {
             InsertStopOrderRequest.Values values = insertSO.getValues();
             Order stopOrder = new Order(values.getType(), values.getSize(), values.getPrice(), username);
 
-            int timestamp = (int) Instant.now().getEpochSecond();
-            Trade trade = new Trade(stopOrder.getId(), stopOrder.getType(), Costants.STOP, stopOrder.getSize(), stopOrder.getPrice(), timestamp);
+            Trade trade = new Trade(stopOrder.getId(), stopOrder.getType(), Costants.STOP, stopOrder.getSize(), stopOrder.getPrice(), (int) Instant.now().getEpochSecond());
             storicoOrdini.add(trade);
 
             switch (values.getType()) {
                 case Costants.ASK:
-                    orderBook.addOrder(stopOrder, orderBook.getAskMapStop());// add order to  map
-                    askStopOrdersExecutor.myNotify();
+                    orderBook.addOrder(stopOrder, orderBook.getAskMapStop());
+                    askStopOrdersExecutor.notifyOrdersExecutor();
                     break;
-                case Costants.BID: // da aggiustare NON USARE
-                    orderBook.addOrder(stopOrder, orderBook.getBidMapStop());// add order to  map
-                    bidStopOrdersExecutor.myNotify();
+                case Costants.BID:
+                    orderBook.addOrder(stopOrder, orderBook.getBidMapStop());
+                    bidStopOrdersExecutor.notifyOrdersExecutor();
                     break;
                 default:
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
@@ -401,6 +407,11 @@ public class ServerThread implements Runnable {
         try {
             String json = in.readUTF();
             CancelOrderRequest cancelOrderRequest = gson.fromJson(json, CancelOrderRequest.class);
+
+            if (!loggedIn) {
+                responseStatus = new ResponseStatus(101, cancelOrderRequest);
+                return;
+            }
 
             if (!Costants.CANCEL_ORDER.equals(cancelOrderRequest.getOperation())) {
                 throw new IllegalArgumentException("Invalid operation: " + cancelOrderRequest.getOperation());
@@ -420,20 +431,14 @@ public class ServerThread implements Runnable {
                 if (!bools.isFound() && !bools.isDeleted()) { // non trovato e non eliminato
                     bools = MyUtils.searchAndDeleteOrderById(idToDelete, map, username);
                     if (bools.isFound() && bools.isDeleted()) { // trovato ed eliminato
+                        responseStatus = new ResponseStatus(100, cancelOrderRequest);
                         break;
                     }
                     if (bools.isFound() && !bools.isDeleted()){ // trovato ma username non corretto
+                        responseStatus = new ResponseStatus(101, cancelOrderRequest);
                         break;
                     }
                 }
-            }
-
-            // set responseStatus
-            if (!bools.isDeleted()) { // non eliminato
-                responseStatus = new ResponseStatus(101, cancelOrderRequest);
-            }
-            else { // eliminato
-                responseStatus = new ResponseStatus(100, cancelOrderRequest);
             }
 
         } catch (IOException e) {

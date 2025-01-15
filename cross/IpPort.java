@@ -18,12 +18,4 @@ public class IpPort {
     public int getPort() {
         return port;
     }
-
-    @Override
-    public String toString() {
-        return "IpPort{" +
-                "ipAddress=" + ipAddress +
-                ", port=" + port +
-                '}';
-    }
 }

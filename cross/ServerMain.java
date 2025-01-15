@@ -10,13 +10,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ServerMain {
-
     private MyProperties properties;
     private static Type mapType;
     private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -38,16 +38,32 @@ public class ServerMain {
         }
     }
 
-    public OrderBook getOrderBook() {
-        return orderBook;
+    public MyProperties getProperties() {
+        return properties;
+    }
+
+    public Gson getGson () {
+        return gson;
     }
 
     public ConcurrentHashMap<String, User> getUsersMap () {
         return usersMap;
     }
 
+    public ConcurrentHashMap<String, IpPort> getUserIpPortMap () {
+        return userIpPortMap;
+    }
+
+    public OrderBook getOrderBook() {
+        return orderBook;
+    }
+
     public ConcurrentLinkedQueue<Trade> getStoricoOrdini () {
         return storicoOrdini;
+    }
+
+    public AtomicInteger getWorkingThreads () {
+        return workingThreads;
     }
 
     public static void loadMapFromJson (String fileName, ConcurrentHashMap<String, User> map) {
@@ -64,9 +80,9 @@ public class ServerMain {
 
         loadMapFromJson(Costants.USERS_MAP_FILE, usersMap); // Load user map from JSON
 
-        orderBook = new OrderBook(gson); // Initialize order book
-
         StoricoOrdini.loadStoricoOrdini(Costants.STORICO_ORDINI, storicoOrdini);
+        
+        orderBook = new OrderBook(gson); // Initialize order book
 
         int nextID = properties.getNextId(); // Get next order ID from properties
         Order.setNextID(nextID); // Set next order ID
@@ -75,27 +91,30 @@ public class ServerMain {
     }
 
     private void acceptConnections(){
-        System.out.println("Server started");
+        System.out.println();
         try {
-            System.out.println("ServerIP: " + InetAddress.getLocalHost().getHostAddress());
+            System.out.println("Server started\nServerIP: " + InetAddress.getLocalHost().getHostAddress());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
         connessioni = Executors.newCachedThreadPool(); // Initialize thread pool for handling connections
+
         AskStopOrdersExecutor askStopOrdersExecutor = new AskStopOrdersExecutor(orderBook, userIpPortMap, gson);
         Thread threadAsk = new Thread(askStopOrdersExecutor);
         threadAsk.start();
+
         BidStopOrdersExecutor bidStopOrdersExecutor = new BidStopOrdersExecutor(orderBook, userIpPortMap, gson);
         Thread threadBid = new Thread(bidStopOrdersExecutor);
         threadBid.start();
+        
         PeriodicUpdate periodicUpdate = new PeriodicUpdate(30000, this);
         Thread threadPeriodicUpdate = new Thread(periodicUpdate);
         threadPeriodicUpdate.start();
         try {
             while (true) {
                 Socket clientSocket = server.accept(); // Accept client connection
-                System.out.println("ClientIP: " + clientSocket.getInetAddress().getHostAddress());
-                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, userIpPortMap, orderBook, gson, askStopOrdersExecutor, bidStopOrdersExecutor, storicoOrdini, workingThreads)); // Handle client connection in a new thread
+                System.out.println("Server listening\nClientIP: " + clientSocket.getInetAddress().getHostAddress());
+                connessioni.execute(new ServerThread(clientSocket, askStopOrdersExecutor, bidStopOrdersExecutor, this)); // Handle client connection in a new thread
             }
         } catch (IOException e) {
             System.err.println("Error accepting connections: " + e.getMessage());

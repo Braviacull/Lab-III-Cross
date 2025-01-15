@@ -26,29 +26,23 @@ public class MyUtils {
     }
 
     public static <K,V> void updateJson(String filename, Map<K, V> map, Gson gson) {
-        Sync.safeWriteStarts(filename);
         try (FileWriter writer = new FileWriter(filename)) {
             gson.toJson(map, writer); // Save user map to JSON file
         } catch (IOException e) {
             System.err.println("Error updating map to " + filename + ": " + e.getMessage());
             e.printStackTrace();
         } finally {
-            Sync.safeWriteEnds(filename);
         }
     }
 
     public static <K,V> void loadMapFromJson(String filename, Map<K, V> map, Type type, Gson gson) {
-        Sync.safeReadStarts(filename);
         try (FileReader reader = new FileReader(filename)) {
             Map<K, V> mapTemp = gson.fromJson(reader, type); // Load user map from JSON file
-            Sync.safeReadEnds(filename);
             replaceMapContent(map, mapTemp);
         } catch (FileNotFoundException e) {
-            Sync.safeReadEnds(filename);
             System.out.println(filename + " not found, creating a new file.");
             updateJson(filename, map, gson); // Create new JSON file if not found
         } catch (IOException e) {
-            Sync.safeReadEnds(filename);
             System.err.println("Error loading map from " + filename + ": " + e.getMessage());
             e.printStackTrace();
         }
@@ -79,7 +73,6 @@ public class MyUtils {
                 int port = ipPort.getPort();
         
                 String json = gson.toJson(notification);
-                System.out.println("Sending JSON: " + json);
         
                 DatagramSocket ds = new DatagramSocket();
         
@@ -88,10 +81,8 @@ public class MyUtils {
                 DatagramPacket dp = new DatagramPacket(data, data.length, ipAddress, port); // Create the datagram packet
         
                 ds.send(dp); // Send the datagram packet
-                System.out.println("DatagramPacket sent.");
         
                 ds.close(); // Close the DatagramSocket
-                System.out.println("DatagramSocket closed.");
             }
             else {
                 System.out.println("User not reachable. Notification lost");
@@ -108,7 +99,7 @@ public class MyUtils {
 
         ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
         if (map.isEmpty() || size > orderBook.getSizeFromMap(map, limit, type)) {
-            System.out.println(size + "  " + orderBook.getSizeFromMap(map, limit, type));
+            System.out.println(size + "  " + orderBook.getSizeFromMap(map, limit, type)); // DA RIMUOVERE
             return size;
         }
 

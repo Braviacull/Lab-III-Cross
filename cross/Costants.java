@@ -28,6 +28,7 @@ public class Costants {
     public static final String SERVER_STOP_STRING = "server.stop_string";
     public static final String SERVER_NEXT_ID = "server.next_id";
     public static final String NOTIFICATION_PORT = "notification.port";
+    public static final String TIMEOUT = "automaticLogout.timeout";
 
 
     // supported orderbook maps

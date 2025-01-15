@@ -17,7 +17,7 @@ public class OrdersExecutor {
         this.gson = gson;
     }
 
-    public void myNotify () {
+    public void notifyOrdersExecutor () {
         synchronized (this) {
             notify();
         }

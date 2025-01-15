@@ -1,6 +1,5 @@
 package cross;
 
-import com.google.gson.*;
 
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
@@ -10,6 +9,8 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class ClientMain {
     private MyProperties properties; // Properties object to read configuration
@@ -18,8 +19,6 @@ public class ClientMain {
     private DataInputStream in; // Input stream to receive data from the server
     private Scanner scanner; // Scanner to read user input
     private Gson gson; // Gson object for JSON serialization/deserialization
-
-    // for login-logout control
     private String username; // Username of the logged-in user
     private boolean firstTimeLogIn; // Flag to check if new user is registered
     private AutomaticLogout automaticLogout;
@@ -35,13 +34,11 @@ public class ClientMain {
             }
             
             properties = new MyProperties(Costants.CLIENT_PROPERTIES_FILE); // Load properties from file
-
             socket = new Socket(properties.getServerIP(), properties.getPort()); // Connect to the server
             out = new DataOutputStream(socket.getOutputStream()); // Initialize output stream
             in = new DataInputStream(socket.getInputStream()); // Initialize input stream
             scanner = new Scanner(System.in); // Initialize scanner for user input
             gson = new GsonBuilder().setPrettyPrinting().create(); // Initialize Gson object
-
             username = ""; // Initialize username as empty
             loggedIn.set(false);
 
@@ -71,10 +68,10 @@ public class ClientMain {
     private void sendRequests() throws IOException {
         String line = "";
         while (!line.equals(properties.getStopString())) {
-            if (loggedIn.get()) {
-                System.out.println("Possible actions: (exit, logout, insertLimitOrder, insertMarketOrder, insertStopOrder, cancelOrder)");
-            } else {
+            if (!loggedIn.get()) {
                 System.out.println("Possible actions: (exit, register, updateCredentials, login)");
+            } else {
+                System.out.println("Possible actions: (exit, logout, insertLimitOrder, insertMarketOrder, insertStopOrder, cancelOrder)");
             }
 
             line = scanner.nextLine();
@@ -171,7 +168,7 @@ public class ClientMain {
         checkResponse(Costants.LOGIN, username); // Check server response
     }
 
-    private void handleLogout(){
+    public void handleLogout(){
         if (loggedIn.get()) {
             logout(username);
         } else {
@@ -260,7 +257,7 @@ public class ClientMain {
         }
     }
 
-    private void checkResponse(String line, String username) {
+    private void checkResponse(String operation, String username) {
         try {
             String response = in.readUTF(); // Read the response from the server
             ResponseStatus responseStatus = gson.fromJson(response, ResponseStatus.class); // Convert JSON response to ResponseStatus object
@@ -269,12 +266,12 @@ public class ClientMain {
             String errorMessage = responseStatus.getErrorMessage(); // Get error message
 
             // Print response received from server
-            if (!line.equals(properties.getStopString())) {
-                System.out.println(responseCode + " - " + errorMessage);
+            if (!operation.equals(properties.getStopString())) {
+                System.out.println("Operation: " + operation + " Response " + responseCode + " - " + errorMessage);
             }
 
             if (responseCode == 100) { // If response code is 100 (success)
-                switch (line) {
+                switch (operation) {
                     case Costants.REGISTER:
                         firstTimeLogIn = true;
                         break;
@@ -287,15 +284,15 @@ public class ClientMain {
                             System.out.print("loopbackaddress\n");
                             receiveNotification = new ReceiveNotification(InetAddress.getLoopbackAddress(), properties.getNotificationPort());
                         } else {
-                            receiveNotification = new ReceiveNotification(InetAddress.getLocalHost(), properties.getNotificationPort());
                             System.out.print("localHostaddress\n");
+                            receiveNotification = new ReceiveNotification(InetAddress.getLocalHost(), properties.getNotificationPort());
                         }
-                        
+                        // start receiving notifications
                         Thread receiveNotificationThread = new Thread(receiveNotification);
                         receiveNotificationThread.start();
                         
-                        // start timeout
-                        automaticLogout = new AutomaticLogout(600000, in, out, gson, username, loggedIn, receiveNotification);
+                        // start timeout for automatic logout
+                        automaticLogout = new AutomaticLogout(properties.getTimeout(), this);
                         Thread timeouThread = new Thread(automaticLogout);
                         timeouThread.start();
                         break;
@@ -305,7 +302,7 @@ public class ClientMain {
                         automaticLogout.stop();// stop timeout
                         automaticLogout = null;
 
-                        receiveNotification.stop();
+                        receiveNotification.stop();// stop receiving notifications
                         receiveNotification = null;
                         break;
                     default:
@@ -318,13 +315,14 @@ public class ClientMain {
         }
     }
 
-    private void close() {
+    public void close() {
         try {
             if (socket != null) socket.close(); // Close socket
             if (out != null) out.close(); // Close output stream
             if (in != null) in.close(); // Close input stream
             if (scanner != null) scanner.close(); // Close scanner
             if (automaticLogout != null) automaticLogout.stop();
+            if (receiveNotification != null) receiveNotification.stop();
         } catch (IOException e) {
             System.err.println("Error closing resources: " + e.getMessage());
             e.printStackTrace();

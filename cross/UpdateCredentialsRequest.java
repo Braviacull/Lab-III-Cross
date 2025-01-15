@@ -27,7 +27,7 @@ public class UpdateCredentialsRequest extends Request{
             return new User (username, new_password);
         }
 
-        public boolean comparePasswords () {
+        public boolean arePasswordsEquals () {
             return new_password.equals(old_password);
         }
     }

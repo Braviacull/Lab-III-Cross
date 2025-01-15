@@ -6,6 +6,13 @@
       "size": 1,
       "price": 1,
       "username": "1"
+    },
+    {
+      "orderId": 82923,
+      "type": "ask",
+      "size": 1,
+      "price": 1,
+      "username": "alessio"
     }
   ]
 }

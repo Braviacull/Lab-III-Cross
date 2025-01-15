@@ -17,7 +17,6 @@ public class ReceiveNotification implements Runnable {
         this.port = port;
     }
 
-    @Override
     public void run() {
         byte[] buffer = new byte[1024];
 
@@ -33,9 +32,9 @@ public class ReceiveNotification implements Runnable {
         } catch (IOException e) {
             if (running.get()) {
                 e.printStackTrace();
-            } else {
-                System.out.println("ReceiveNotification thread stopped.");
             }
+        } finally {
+            System.out.println("ReceiveNotification thread stopped.");
         }
     }
 

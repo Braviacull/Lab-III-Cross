@@ -79,6 +79,7 @@ public class OrderBook {
                             size += order.getSize();
                         }
                     }
+                    else break; // limit (minimo prezzo di vendita) > price (prezzo a cui la gente é disposta a comprare)
                 }
                 break;
             case Costants.BID:
@@ -115,41 +116,19 @@ public class OrderBook {
         map.computeIfAbsent(limitOrder.getPrice(), _ -> new ConcurrentLinkedQueue<Order>()).add(limitOrder); 
     }
 
-    // Syncronised
     public ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> getAskMap() {
-        Sync.askMapLock.readLock().lock();
-        try {
             return askMap;
-        } finally {
-            Sync.askMapLock.readLock().unlock();
-        }
     }
 
-    // Syncronised
     public ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> getBidMap() {
-        Sync.bidMapLock.readLock().lock();
-        try {
             return bidMap;
-        } finally {
-            Sync.bidMapLock.readLock().unlock();
-        }
     }
 
     public ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> getAskMapStop() {
-        Sync.askMapStopLock.readLock().lock();
-        try {
             return askMapStop;
-        } finally {
-            Sync.askMapStopLock.readLock().unlock();
-        }
     }
 
     public ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> getBidMapStop() {
-        Sync.bidMapStopLock.readLock().lock();
-        try {
             return bidMapStop;
-        } finally {
-            Sync.bidMapStopLock.readLock().unlock();
-        }
     }
 }
