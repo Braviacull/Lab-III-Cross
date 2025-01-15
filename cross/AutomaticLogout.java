@@ -31,9 +31,13 @@ public class AutomaticLogout implements Runnable {
                     lock.wait(timeout);
                     if (!timerReset && running) {
                         synchronized (clientMain){
-                            System.out.println("Automatic logout");
-                            System.out.println("Possible actions: (exit, register, updateCredentials, login)");
-                            performLogout();
+                            if (clientMain.getIsServerOnline().get()) {
+                                System.out.println("Automatic logout");
+                                System.out.println("Possible actions: (exit, register, updateCredentials, login)");
+                                performLogout();
+                            } else {
+                                running = false;
+                            }
                         }
                     }
                 } catch (InterruptedException e) {

@@ -14,6 +14,7 @@ public class MyProperties {
     private int next_id;
     private int notificationPort;
     private int timeout;
+    private int period;
 
     public MyProperties(String fileName) {
         this.propertiesFilePath = fileName;
@@ -35,6 +36,10 @@ public class MyProperties {
 
             if (properties.getProperty(Costants.TIMEOUT) != null) {
                 timeout = Integer.parseInt(properties.getProperty(Costants.TIMEOUT));
+            }
+
+            if (properties.getProperty(Costants.PERIOD) != null) {
+                period = Integer.parseInt(properties.getProperty(Costants.PERIOD));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -73,5 +78,9 @@ public class MyProperties {
 
     public int getTimeout () {
         return timeout;
+    }
+
+    public int getPeriod () {
+        return period;
     }
 }

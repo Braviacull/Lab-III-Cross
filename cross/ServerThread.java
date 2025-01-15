@@ -1,13 +1,12 @@
 package cross;
 
 import com.google.gson.*;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -25,7 +24,7 @@ public class ServerThread implements Runnable {
     private ConcurrentHashMap<String, IpPort> userIpPortMap;
     private OrderBook orderBook;
     private ConcurrentLinkedQueue<Trade> storicoOrdini;
-    private AtomicInteger workingThreads;
+    private AtomicBoolean running;
     private Boolean loggedIn;
     private String username;
     private DataInputStream in;
@@ -43,7 +42,7 @@ public class ServerThread implements Runnable {
         this.userIpPortMap = serverMain.getUserIpPortMap();
         this.orderBook = serverMain.getOrderBook();
         this.storicoOrdini = serverMain.getStoricoOrdini();
-        this.workingThreads = serverMain.getWorkingThreads();
+        this.running = serverMain.getRunning();
         this.username = "";
         this.loggedIn = false;
     }
@@ -65,11 +64,9 @@ public class ServerThread implements Runnable {
             out = new DataOutputStream(clientSocket.getOutputStream());
 
             String operation = "";
-            while (!operation.equals(stopString)) {
+            while (!operation.equals(stopString) && running.get()) {
                 operation = in.readUTF();
-                workingThreads.addAndGet(1);
                 handleOperation(operation);
-                workingThreads.addAndGet(-1);
             }
         } catch (IOException e) {
             if (loggedIn){
@@ -84,6 +81,13 @@ public class ServerThread implements Runnable {
 
     private void handleOperation(String operation) throws IOException {
         switch (operation) {
+            case Costants.PING:
+                if (running.get()){
+                    out.writeUTF(Costants.ONLINE);
+                } else {
+                    out.writeUTF(Costants.OFFLINE);
+                }
+                break;
             case Costants.REGISTER:
                 handleRegister();
                 out.writeUTF(gson.toJson(responseStatus));
@@ -114,7 +118,7 @@ public class ServerThread implements Runnable {
                 out.writeUTF(gson.toJson(responseStatus));
                 break;
             default:
-            System.out.println("ServerThread " + Thread.currentThread().getId() + " Stopped");
+            System.out.println("ServerThread  Stopped");
                 if (operation.equals(stopString)) return;
         }
     }

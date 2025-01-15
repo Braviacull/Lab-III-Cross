@@ -3,6 +3,10 @@ package cross;
 public class Costants {
     public static final String CLIENT_PROPERTIES_FILE = "client.properties";
 
+    public static final String ONLINE = "online";
+    public static final String OFFLINE= "offline";
+    public static final String PING = "ping"; 
+
     // operations
     public static final String REGISTER = "register";
     public static final String LOGIN = "login";
@@ -29,6 +33,7 @@ public class Costants {
     public static final String SERVER_NEXT_ID = "server.next_id";
     public static final String NOTIFICATION_PORT = "notification.port";
     public static final String TIMEOUT = "automaticLogout.timeout";
+    public static final String PERIOD = "server.period";
 
 
     // supported orderbook maps

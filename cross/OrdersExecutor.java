@@ -3,6 +3,7 @@ package cross;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.gson.Gson;
 
@@ -10,11 +11,18 @@ public class OrdersExecutor {
     public OrderBook orderBook;
     private ConcurrentHashMap<String, IpPort> userIpPortMap;
     private Gson gson;
+    public AtomicBoolean running;
 
     OrdersExecutor (OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap, Gson gson) {
         this.orderBook = orderBook;
         this.userIpPortMap = userIpPortMap;
         this.gson = gson;
+        this.running = new AtomicBoolean(true);
+    }
+
+    public void stop() {
+        running.set(false);
+        notifyOrdersExecutor();
     }
 
     public void notifyOrdersExecutor () {
@@ -26,7 +34,6 @@ public class OrdersExecutor {
     public void myWait () {
         try {
             wait();
-            System.out.println("Notifica ricevuta");
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

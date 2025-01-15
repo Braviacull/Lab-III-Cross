@@ -23,7 +23,9 @@ public class ClientMain {
     private boolean firstTimeLogIn; // Flag to check if new user is registered
     private AutomaticLogout automaticLogout;
     private ReceiveNotification receiveNotification;
-    private AtomicBoolean loggedIn = new AtomicBoolean();
+    private PeriodicPing periodicPing;
+    private AtomicBoolean loggedIn = new AtomicBoolean(false);
+    private AtomicBoolean isServerOnline = new AtomicBoolean(true);
 
     public ClientMain() {
         try {
@@ -49,6 +51,10 @@ public class ClientMain {
         }
     }
 
+    public AtomicBoolean getIsServerOnline () {
+        return isServerOnline;
+    }
+
     private void defaultBehavior (String line) {
         if (!line.equals(properties.getStopString())) {
             System.out.println("Unrecognized action");
@@ -65,7 +71,25 @@ public class ClientMain {
         }
     }
 
+    public boolean isServerOnline() {
+        try {
+            synchronized (this) {
+                out.writeUTF(Costants.PING);
+                String response = in.readUTF();
+                System.out.println(response.equals(Costants.ONLINE));
+                return response.equals(Costants.ONLINE);
+            }
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     private void sendRequests() throws IOException {
+        // start timeout for automatic logout
+        periodicPing = new PeriodicPing(10000, this);
+        Thread periodicPingThread = new Thread(periodicPing);
+        periodicPingThread.start();
+
         String line = "";
         while (!line.equals(properties.getStopString())) {
             if (!loggedIn.get()) {
@@ -75,6 +99,12 @@ public class ClientMain {
             }
 
             line = scanner.nextLine();
+
+            if (!isServerOnline()) {
+                System.out.println("Server Offline, chiudo");
+                close();
+                return;
+            }
             
             synchronized (this) {
                 if (!loggedIn.get()){
@@ -128,10 +158,10 @@ public class ClientMain {
     }
 
     private void register (String username, String password) {
-        MyUtils.sendLine(Costants.REGISTER, out);
+        MyUtils.sendLine(Costants.REGISTER, out, isServerOnline);
         RegistrationRequest reg = RequestFactory.createRegistrationRequest(username, password); // Create registration request
         String jsonReg = gson.toJson(reg); // Convert request to JSON
-        MyUtils.sendLine(jsonReg, out); // Send JSON request to the server
+        MyUtils.sendLine(jsonReg, out, isServerOnline); // Send JSON request to the server
         checkResponse(Costants.REGISTER, username); // Check server response
         if (firstTimeLogIn) {
             firstTimeLogIn = false;
@@ -147,10 +177,10 @@ public class ClientMain {
     }
 
     private void updateCredentials(String username, String currentPassword, String newPassword) {
-        MyUtils.sendLine(Costants.UPDATE_CREDENTIALS, out);
+        MyUtils.sendLine(Costants.UPDATE_CREDENTIALS, out, isServerOnline);
         UpdateCredentialsRequest update = RequestFactory.createUpdateCredentialsRequest(username, currentPassword, newPassword); // Create update credentials request
         String jsonUpdate = gson.toJson(update); // Convert request to JSON
-        MyUtils.sendLine(jsonUpdate, out); // Send JSON request to the server
+        MyUtils.sendLine(jsonUpdate, out, isServerOnline); // Send JSON request to the server
         checkResponse(Costants.UPDATE_CREDENTIALS, username); // Check server response
     }
 
@@ -161,10 +191,10 @@ public class ClientMain {
     }
 
     private void login (String username, String password) {
-        MyUtils.sendLine(Costants.LOGIN, out);
+        MyUtils.sendLine(Costants.LOGIN, out, isServerOnline);
         LoginRequest login = RequestFactory.createLoginRequest(username, password); // Create login request
         String jsonLogin = gson.toJson(login); // Convert request to JSON
-        MyUtils.sendLine(jsonLogin, out); // Send JSON request to the server
+        MyUtils.sendLine(jsonLogin, out, isServerOnline); // Send JSON request to the server
         checkResponse(Costants.LOGIN, username); // Check server response
     }
 
@@ -177,11 +207,11 @@ public class ClientMain {
     }
 
     private void logout (String username) {
-        MyUtils.sendLine(Costants.LOGOUT, out);
+        MyUtils.sendLine(Costants.LOGOUT, out, isServerOnline);
         LogoutRequest logout = RequestFactory.createLogoutRequest(); // Create logout request
         String jsonLogout = gson.toJson(logout); // Convert request to JSON
-        MyUtils.sendLine(jsonLogout, out); // Send JSON request to the server
-        MyUtils.sendLine(username, out); // Send username separately as logout.Values is an empty object
+        MyUtils.sendLine(jsonLogout, out, isServerOnline); // Send JSON request to the server
+        MyUtils.sendLine(username, out, isServerOnline); // Send username separately as logout.Values is an empty object
         checkResponse(Costants.LOGOUT, username); // Check server response
     }
 
@@ -193,10 +223,10 @@ public class ClientMain {
     }
 
     private void insertLimitOrder (String tipo, int dimensione, int prezzoLimite) {
-        MyUtils.sendLine(Costants.INSERT_LIMIT_ORDER, out);
+        MyUtils.sendLine(Costants.INSERT_LIMIT_ORDER, out, isServerOnline);
         InsertLimitOrderRequest insertLimitOrderRequest = RequestFactory.createInsertLimitOrderRequest(tipo, dimensione, prezzoLimite); // Create limit order request
         String json = gson.toJson(insertLimitOrderRequest); // Convert request to JSON
-        MyUtils.sendLine(json, out); // Send JSON request to the server
+        MyUtils.sendLine(json, out, isServerOnline); // Send JSON request to the server
         receiveIdOrder(); // Receive the order ID from the server
     }
 
@@ -207,10 +237,10 @@ public class ClientMain {
     }
 
     private void insertMarketOrder (String tipo, int dimensione) {
-        MyUtils.sendLine(Costants.INSERT_MARKET_ORDER, out);
+        MyUtils.sendLine(Costants.INSERT_MARKET_ORDER, out, isServerOnline);
         InsertMarketOrderRequest insertMarketOrderRequest = RequestFactory.createInsertMarketOrderRequest(tipo, dimensione); // Create market order request
         String json = gson.toJson(insertMarketOrderRequest); // Convert request to JSON
-        MyUtils.sendLine(json, out); // Send JSON request to the server
+        MyUtils.sendLine(json, out, isServerOnline); // Send JSON request to the server
         receiveIdOrder(); // Receive the order ID from the server
     }
 
@@ -222,10 +252,10 @@ public class ClientMain {
     }
 
     private void insertStopOrder (String tipo, int dimensione, int stopPrice) {
-        MyUtils.sendLine(Costants.INSERT_STOP_ORDER, out);
+        MyUtils.sendLine(Costants.INSERT_STOP_ORDER, out, isServerOnline);
         InsertStopOrderRequest insertStopOrderRequest = RequestFactory.createInsertStopOrderRequest(tipo, dimensione, stopPrice);
         String json = gson.toJson(insertStopOrderRequest); // Convert request to JSON
-        MyUtils.sendLine(json, out); // Send JSON request to the server
+        MyUtils.sendLine(json, out, isServerOnline); // Send JSON request to the server
         receiveIdOrder(); // Receive the order ID from the server
 
     }
@@ -236,10 +266,10 @@ public class ClientMain {
     }
 
     private void cancelOrder (int orderId) {
-        MyUtils.sendLine(Costants.CANCEL_ORDER, out);
+        MyUtils.sendLine(Costants.CANCEL_ORDER, out, isServerOnline);
         CancelOrderRequest cancelOrderRequest = RequestFactory.createCancelOrderRequest(orderId);
         String json = gson.toJson(cancelOrderRequest);
-        MyUtils.sendLine(json, out); // Send JSON request to the server
+        MyUtils.sendLine(json, out, isServerOnline); // Send JSON request to the server
         checkResponse(Costants.CANCEL_ORDER, username); // Check server response
     }
 
@@ -252,8 +282,11 @@ public class ClientMain {
                 System.out.println("Order " + id + " submitted");
             }
         } catch (IOException e) {
-            System.err.println("Error receiving order ID: " + e.getMessage());
-            e.printStackTrace();
+            if (isServerOnline.get()){
+                System.err.println("Error receiving order ID: " + e.getMessage());
+                e.printStackTrace();
+            } else {
+            }
         }
     }
 
@@ -310,8 +343,11 @@ public class ClientMain {
                 }
             }
         } catch (IOException e) {
-            System.err.println("Error checking response: " + e.getMessage());
-            e.printStackTrace();
+            if (isServerOnline.get()){
+                System.err.println("Error receiving order ID: " + e.getMessage());
+                e.printStackTrace();
+            } else {
+            }
         }
     }
 
@@ -323,6 +359,7 @@ public class ClientMain {
             if (scanner != null) scanner.close(); // Close scanner
             if (automaticLogout != null) automaticLogout.stop();
             if (receiveNotification != null) receiveNotification.stop();
+            if (periodicPing != null) periodicPing.stop();
         } catch (IOException e) {
             System.err.println("Error closing resources: " + e.getMessage());
             e.printStackTrace();

@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.lang.reflect.Type;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -48,12 +49,15 @@ public class MyUtils {
         }
     }
 
-    public static void sendLine (String line, DataOutputStream out) {
+    public static void sendLine (String line, DataOutputStream out, AtomicBoolean isServerOnline) {
         try {
             out.writeUTF(line);
         } catch (IOException e) {
-            System.err.println("Error receiving order ID: " + e.getMessage());
-            e.printStackTrace();
+            if (isServerOnline.get()){
+                System.err.println("Error receiving order ID: " + e.getMessage());
+                e.printStackTrace();
+            } else {
+            }
         }
     }
 

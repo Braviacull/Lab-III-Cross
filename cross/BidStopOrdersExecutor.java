@@ -1,18 +1,15 @@
 package cross;
 
 import java.util.Iterator;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
-
-import com.google.gson.Gson;
 
 public class BidStopOrdersExecutor extends OrdersExecutor implements Runnable {
     public int askMarketPrice;
     public ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map;
     
-    BidStopOrdersExecutor (OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap, Gson gson) {
-        super(orderBook, userIpPortMap, gson);
+    BidStopOrdersExecutor (ServerMain serverMain) {
+        super(serverMain.getOrderBook(), serverMain.getUserIpPortMap(), serverMain.getGson());
         map = orderBook.getBidMapStop();
     }
 
@@ -27,12 +24,18 @@ public class BidStopOrdersExecutor extends OrdersExecutor implements Runnable {
     }
 
     public void run () {
-        while (true) {
+        while (running.get()) {
             synchronized (this) {
-                while (calculateConditionToWait(null)) {
+                while (running.get() && calculateConditionToWait(null)) {
                     myWait();
                 }
             }
+
+            if (!running.get()) {
+                System.out.println("BidStopOrdersExecutor stopped");
+                return;
+            }
+
             System.out.println("Risvegliato");
 
             if (orderBook.getBidMapStop().isEmpty()) {

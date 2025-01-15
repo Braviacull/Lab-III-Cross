@@ -2,20 +2,22 @@ package cross;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PeriodicUpdate implements Runnable{
     private final Object lock = new Object();
-    private boolean running = true;
+    private AtomicBoolean running;
     private final long period;
     private ServerMain serverMain;
 
     public PeriodicUpdate (long period, ServerMain serverMain) {
         this.period = period;
         this.serverMain = serverMain;
+        this.running = new AtomicBoolean(true);
     }
 
     public void run () {
-        while (running) {
+        while (running.get()) {
             synchronized(lock) {
                 try {
                     lock.wait(period);
@@ -44,9 +46,9 @@ public class PeriodicUpdate implements Runnable{
         StoricoOrdini.updateJson(Costants.STORICO_ORDINI_TEMP, storicoOrdini);
     }
 
-    public void exit() {
-        running = false;
+    public void stop() {
         synchronized(lock) {
+            running.set(false);
             lock.notify();
         }
     }

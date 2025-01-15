@@ -8,8 +8,8 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -22,20 +22,51 @@ public class ServerMain {
     private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private ServerSocket server;
     private ExecutorService connessioni;
+    private ExecutorService services;
     private ConcurrentHashMap<String, User> usersMap = new ConcurrentHashMap<String, User> ();
     private ConcurrentHashMap<String, IpPort> userIpPortMap = new ConcurrentHashMap<>();
     private OrderBook orderBook;
     private ConcurrentLinkedQueue<Trade> storicoOrdini = new ConcurrentLinkedQueue<>();
-    private AtomicInteger workingThreads = new AtomicInteger(0);
+    private AtomicBoolean running = new AtomicBoolean(true);
+    private AskStopOrdersExecutor askStopOrdersExecutor;
+    private BidStopOrdersExecutor bidStopOrdersExecutor;
+    private PeriodicUpdate periodicUpdate;
 
     public ServerMain() {
         try {
+            Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
             initializeServer(); // Initialize server configurations and resources
             acceptConnections(); // Start accepting client connections
         } catch (IOException e) {
             System.err.println("Error initializing server: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    public void shutdown() {
+        System.out.println("Server will shut down soon...");
+        running.set(false);
+
+        connessioni.shutdown();
+        services.shutdown();
+
+        askStopOrdersExecutor.stop();
+        bidStopOrdersExecutor.stop();
+        periodicUpdate.stop();
+
+        try {
+            services.awaitTermination(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        try {
+            connessioni.awaitTermination(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("Server shut down");
+        
     }
 
     public MyProperties getProperties() {
@@ -62,8 +93,8 @@ public class ServerMain {
         return storicoOrdini;
     }
 
-    public AtomicInteger getWorkingThreads () {
-        return workingThreads;
+    public AtomicBoolean getRunning () {
+        return running;
     }
 
     public static void loadMapFromJson (String fileName, ConcurrentHashMap<String, User> map) {
@@ -98,18 +129,16 @@ public class ServerMain {
             e.printStackTrace();
         }
         connessioni = Executors.newCachedThreadPool(); // Initialize thread pool for handling connections
+        services = Executors.newFixedThreadPool(3);
 
-        AskStopOrdersExecutor askStopOrdersExecutor = new AskStopOrdersExecutor(orderBook, userIpPortMap, gson);
-        Thread threadAsk = new Thread(askStopOrdersExecutor);
-        threadAsk.start();
+        askStopOrdersExecutor = new AskStopOrdersExecutor(this);
+        services.execute(askStopOrdersExecutor);
 
-        BidStopOrdersExecutor bidStopOrdersExecutor = new BidStopOrdersExecutor(orderBook, userIpPortMap, gson);
-        Thread threadBid = new Thread(bidStopOrdersExecutor);
-        threadBid.start();
+        bidStopOrdersExecutor = new BidStopOrdersExecutor(this);
+        services.execute(bidStopOrdersExecutor);
         
-        PeriodicUpdate periodicUpdate = new PeriodicUpdate(30000, this);
-        Thread threadPeriodicUpdate = new Thread(periodicUpdate);
-        threadPeriodicUpdate.start();
+        periodicUpdate = new PeriodicUpdate(properties.getPeriod(), this);
+        services.execute(periodicUpdate);
         try {
             while (true) {
                 Socket clientSocket = server.accept(); // Accept client connection
@@ -117,8 +146,10 @@ public class ServerMain {
                 connessioni.execute(new ServerThread(clientSocket, askStopOrdersExecutor, bidStopOrdersExecutor, this)); // Handle client connection in a new thread
             }
         } catch (IOException e) {
-            System.err.println("Error accepting connections: " + e.getMessage());
-            e.printStackTrace();
+            if (!running.get()){
+                System.err.println("Error accepting connections: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
