@@ -343,21 +343,23 @@ public class ServerThread implements Runnable {
                         throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
                 }
             }
-            sendMarketOrderIdAfterTransaction(size, values.getType());
-            
+            Order marketOrder = new Order(values.getType(), values.getSize(), username);
+            int timestamp = (int) Instant.now().getEpochSecond();
+            Trade trade = new Trade(marketOrder.getId(), marketOrder.getType(), Costants.MARKET, marketOrder.getSize(), timestamp);
+            storicoOrdini.add(trade);
+            StoricoOrdini.updateJson(Costants.STORICO_ORDINI_TEMP, storicoOrdini);
+            sendMarketOrderIdAfterTransaction(size, values.getType(), marketOrder, trade);
         } catch (IOException e) {
             System.err.println("Error during insertMarketOrder: " + e.getMessage());
         }
     }
 
-    private void sendMarketOrderIdAfterTransaction (int size, String type) {
+    private void sendMarketOrderIdAfterTransaction (int size, String type, Order marketOrder, Trade trade) {
         if (size > 0) {
             MyUtils.sendOrderId(-1, out);
         } else if (size == 0) {
-            Order marketOrder = new Order(type, size, username);
             properties.setNextId(Order.getNextId());
-            MyUtils.sendOrderId(marketOrder.getId(), out);
-            Trade trade = new Trade(marketOrder.getId(), marketOrder.getType(), Costants.MARKET, marketOrder.getSize(), (int) Instant.now().getEpochSecond());
+            MyUtils.sendOrderId(marketOrder.getId(), out);         
             MyUtils.sendNotification(userIpPortMap.get(marketOrder.getUsername()), new Notification(trade), gson);
         } else {
             throw new IllegalArgumentException ("size must not be negative, SIZE: " + size);
@@ -375,6 +377,11 @@ public class ServerThread implements Runnable {
 
             InsertStopOrderRequest.Values values = insertSO.getValues();
             Order stopOrder = new Order(values.getType(), values.getSize(), values.getPrice(), username);
+
+            int timestamp = (int) Instant.now().getEpochSecond();
+            Trade trade = new Trade(stopOrder.getId(), stopOrder.getType(), Costants.STOP, stopOrder.getSize(), stopOrder.getPrice(), timestamp);
+            storicoOrdini.add(trade);
+            StoricoOrdini.updateJson(Costants.STORICO_ORDINI_TEMP, storicoOrdini);
 
             switch (values.getType()) {
                 case Costants.ASK:

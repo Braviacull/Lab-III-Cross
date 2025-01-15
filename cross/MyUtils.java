@@ -74,23 +74,28 @@ public class MyUtils {
 
     public synchronized static void sendNotification(IpPort ipPort, Notification notification, Gson gson) {
         try {
-            InetAddress ipAddress = ipPort.getIpAddress();
-            int port = ipPort.getPort();
-    
-            String json = gson.toJson(notification);
-            System.out.println("Sending JSON: " + json);
-    
-            DatagramSocket ds = new DatagramSocket();
-    
-            byte[] data = json.getBytes("UTF-8"); // Convert the JSON string to a byte array
-    
-            DatagramPacket dp = new DatagramPacket(data, data.length, ipAddress, port); // Create the datagram packet
-    
-            ds.send(dp); // Send the datagram packet
-            System.out.println("DatagramPacket sent.");
-    
-            ds.close(); // Close the DatagramSocket
-            System.out.println("DatagramSocket closed.");
+            if (ipPort != null) {
+                InetAddress ipAddress = ipPort.getIpAddress();
+                int port = ipPort.getPort();
+        
+                String json = gson.toJson(notification);
+                System.out.println("Sending JSON: " + json);
+        
+                DatagramSocket ds = new DatagramSocket();
+        
+                byte[] data = json.getBytes("UTF-8"); // Convert the JSON string to a byte array
+        
+                DatagramPacket dp = new DatagramPacket(data, data.length, ipAddress, port); // Create the datagram packet
+        
+                ds.send(dp); // Send the datagram packet
+                System.out.println("DatagramPacket sent.");
+        
+                ds.close(); // Close the DatagramSocket
+                System.out.println("DatagramSocket closed.");
+            }
+            else {
+                System.out.println("User not reachable. Notification lost");
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
