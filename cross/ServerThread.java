@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -29,8 +30,9 @@ public class ServerThread implements Runnable {
     private AskStopOrdersExecutor askStopOrdersExecutor;
     private BidStopOrdersExecutor bidStopOrdersExecutor;
     private ConcurrentLinkedQueue<Trade> storicoOrdini;
+    private AtomicInteger workingThreads;
 
-    public ServerThread(Socket socket, MyProperties properties, ConcurrentHashMap<String, User> usersMap, ConcurrentHashMap<String, IpPort> userIpPortMap, OrderBook orderBook, Gson gson, AskStopOrdersExecutor askStopOrdersExecutor, BidStopOrdersExecutor bidStopOrdersExecutor, ConcurrentLinkedQueue<Trade> storicoOrdini) {
+    public ServerThread(Socket socket, MyProperties properties, ConcurrentHashMap<String, User> usersMap, ConcurrentHashMap<String, IpPort> userIpPortMap, OrderBook orderBook, Gson gson, AskStopOrdersExecutor askStopOrdersExecutor, BidStopOrdersExecutor bidStopOrdersExecutor, ConcurrentLinkedQueue<Trade> storicoOrdini, AtomicInteger workingThreads) {
         this.clientSocket = socket;
         this.properties = properties; 
         this.stopString = properties.getStopString();
@@ -43,6 +45,7 @@ public class ServerThread implements Runnable {
         this.askStopOrdersExecutor = askStopOrdersExecutor;
         this.bidStopOrdersExecutor = bidStopOrdersExecutor;
         this.storicoOrdini = storicoOrdini;
+        this.workingThreads = workingThreads;
     }
 
     private void close() {
@@ -66,7 +69,9 @@ public class ServerThread implements Runnable {
             String operation = "";
             while (!operation.equals(stopString)) {
                 operation = in.readUTF();
+                workingThreads.addAndGet(1);
                 handleOperation(operation);
+                workingThreads.addAndGet(-1);
             }
         } catch (IOException e) {
             if (loggedIn){
@@ -136,7 +141,6 @@ public class ServerThread implements Runnable {
                 responseStatus = new ResponseStatus(102, reg);
             } else {
                 usersMap.put(user.getUsername(), user);
-                ServerMain.updateJson(Costants.USERS_MAP_FILE, usersMap);
 
                 responseStatus = new ResponseStatus(100, reg);
             }
@@ -174,7 +178,6 @@ public class ServerThread implements Runnable {
                 if (gson.toJson(registeredUser).equals(gson.toJson(oldUser))) {
                     User newUser = values.getNewUser();
                     usersMap.put(username, newUser);
-                    ServerMain.updateJson(Costants.USERS_MAP_FILE, usersMap);
 
                     responseStatus = new ResponseStatus(100, update);
                 } else {
@@ -268,7 +271,6 @@ public class ServerThread implements Runnable {
             Trade trade = new Trade(limitOrder.getId(), limitOrder.getType(), Costants.LIMIT, limitOrder.getSize(), limitOrder.getPrice(), timestamp);
             storicoOrdini.add(trade);
 
-            StoricoOrdini.updateJson(Costants.STORICO_ORDINI_TEMP, storicoOrdini);
 
             int size = 1;
             switch (values.getType()) {
@@ -276,12 +278,10 @@ public class ServerThread implements Runnable {
                     if (values.getPrice() <= orderBook.getBidMarketPrice(orderBook.getBidMap())) { // spread <= 0
                         size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap, gson);
                         if (size == 0){ // transazione riuscita
-                            orderBook.updateJson(Costants.BID_MAP_FILE, orderBook.getBidMap());
                         }
                     }
                     if (size != 0) { //transazione non riuscita o non provata
                         orderBook.addOrder(limitOrder, orderBook.getAskMap());
-                        orderBook.updateJson(Costants.ASK_MAP_FILE, orderBook.getAskMap());
                         bidStopOrdersExecutor.myNotify();
                     }
                     break;
@@ -289,12 +289,10 @@ public class ServerThread implements Runnable {
                     if (values.getPrice() >= orderBook.getAskMarketPrice(orderBook.getAskMap())) { // spread <= 0
                         size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap, gson);
                         if (size == 0){
-                            orderBook.updateJson(Costants.ASK_MAP_FILE, orderBook.getAskMap());
                         }
                     }
                     if (size != 0) {
                         orderBook.addOrder(limitOrder, orderBook.getBidMap()); // add order to main map
-                        orderBook.updateJson(Costants.BID_MAP_FILE, orderBook.getBidMap());
                         askStopOrdersExecutor.myNotify();
                     }
                     break;
@@ -334,10 +332,8 @@ public class ServerThread implements Runnable {
             if (size == 0) {
                 switch (orderBook.reverseType(values.getType())) {
                     case Costants.ASK:
-                        orderBook.updateJson(orderBook.getJsonFileNameFromMap(orderBook.getAskMap()), orderBook.getAskMap());
                         break;
                     case Costants.BID:
-                        orderBook.updateJson(orderBook.getJsonFileNameFromMap(orderBook.getBidMap()), orderBook.getBidMap());
                         break;
                     default:
                         throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
@@ -347,7 +343,6 @@ public class ServerThread implements Runnable {
             int timestamp = (int) Instant.now().getEpochSecond();
             Trade trade = new Trade(marketOrder.getId(), marketOrder.getType(), Costants.MARKET, marketOrder.getSize(), timestamp);
             storicoOrdini.add(trade);
-            StoricoOrdini.updateJson(Costants.STORICO_ORDINI_TEMP, storicoOrdini);
             sendMarketOrderIdAfterTransaction(size, values.getType(), marketOrder, trade);
         } catch (IOException e) {
             System.err.println("Error during insertMarketOrder: " + e.getMessage());
@@ -381,17 +376,14 @@ public class ServerThread implements Runnable {
             int timestamp = (int) Instant.now().getEpochSecond();
             Trade trade = new Trade(stopOrder.getId(), stopOrder.getType(), Costants.STOP, stopOrder.getSize(), stopOrder.getPrice(), timestamp);
             storicoOrdini.add(trade);
-            StoricoOrdini.updateJson(Costants.STORICO_ORDINI_TEMP, storicoOrdini);
 
             switch (values.getType()) {
                 case Costants.ASK:
                     orderBook.addOrder(stopOrder, orderBook.getAskMapStop());// add order to  map
-                    orderBook.updateJson(Costants.ASK_MAP_STOP_FILE, orderBook.getAskMapStop());
                     askStopOrdersExecutor.myNotify();
                     break;
                 case Costants.BID: // da aggiustare NON USARE
                     orderBook.addOrder(stopOrder, orderBook.getBidMapStop());// add order to  map
-                    orderBook.updateJson(Costants.BID_MAP_STOP_FILE, orderBook.getBidMapStop());
                     bidStopOrdersExecutor.myNotify();
                     break;
                 default:
@@ -428,7 +420,6 @@ public class ServerThread implements Runnable {
                 if (!bools.isFound() && !bools.isDeleted()) { // non trovato e non eliminato
                     bools = MyUtils.searchAndDeleteOrderById(idToDelete, map, username);
                     if (bools.isFound() && bools.isDeleted()) { // trovato ed eliminato
-                        orderBook.updateJson(orderBook.getJsonFileNameFromMap(map), map);
                         break;
                     }
                     if (bools.isFound() && !bools.isDeleted()){ // trovato ma username non corretto

@@ -51,7 +51,6 @@ public class AskStopOrdersExecutor extends OrdersExecutor implements Runnable {
             MyUtils.printMap(orderBook.getAskMapStop());
             MyUtils.printMap(orderBook.getBidMap());
 
-            orderBook.updateJson(orderBook.getJsonFileNameFromMap(orderBook.getAskMapStop()), orderBook.getAskMapStop());
         }
     }
 }

@@ -114,15 +114,6 @@ public class OrderBook {
     public void addOrder(Order limitOrder, ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
         map.computeIfAbsent(limitOrder.getPrice(), _ -> new ConcurrentLinkedQueue<Order>()).add(limitOrder); 
     }
-    // Syncronised
-    public void setAskMap(ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
-        Sync.askMapLock.writeLock().lock();
-        try {
-            askMap = map;
-        } finally {
-            Sync.askMapLock.writeLock().unlock();
-        }
-    }
 
     // Syncronised
     public ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> getAskMap() {
@@ -131,16 +122,6 @@ public class OrderBook {
             return askMap;
         } finally {
             Sync.askMapLock.readLock().unlock();
-        }
-    }
-
-    // Syncronised
-    public void setBidMap(ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
-        Sync.bidMapLock.writeLock().lock();
-        try {
-            bidMap = map;
-        } finally {
-            Sync.bidMapLock.writeLock().unlock();
         }
     }
 

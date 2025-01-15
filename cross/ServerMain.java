@@ -8,6 +8,8 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,7 +25,8 @@ public class ServerMain {
     private ConcurrentHashMap<String, User> usersMap = new ConcurrentHashMap<String, User> ();
     private ConcurrentHashMap<String, IpPort> userIpPortMap = new ConcurrentHashMap<>();
     private OrderBook orderBook;
-    ConcurrentLinkedQueue<Trade> storicoOrdini = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<Trade> storicoOrdini = new ConcurrentLinkedQueue<>();
+    private AtomicInteger workingThreads = new AtomicInteger(0);
 
     public ServerMain() {
         try {
@@ -33,6 +36,18 @@ public class ServerMain {
             System.err.println("Error initializing server: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    public OrderBook getOrderBook() {
+        return orderBook;
+    }
+
+    public ConcurrentHashMap<String, User> getUsersMap () {
+        return usersMap;
+    }
+
+    public ConcurrentLinkedQueue<Trade> getStoricoOrdini () {
+        return storicoOrdini;
     }
 
     public static void loadMapFromJson (String fileName, ConcurrentHashMap<String, User> map) {
@@ -73,11 +88,14 @@ public class ServerMain {
         BidStopOrdersExecutor bidStopOrdersExecutor = new BidStopOrdersExecutor(orderBook, userIpPortMap, gson);
         Thread threadBid = new Thread(bidStopOrdersExecutor);
         threadBid.start();
+        PeriodicUpdate periodicUpdate = new PeriodicUpdate(30000, this);
+        Thread threadPeriodicUpdate = new Thread(periodicUpdate);
+        threadPeriodicUpdate.start();
         try {
             while (true) {
                 Socket clientSocket = server.accept(); // Accept client connection
                 System.out.println("ClientIP: " + clientSocket.getInetAddress().getHostAddress());
-                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, userIpPortMap, orderBook, gson, askStopOrdersExecutor, bidStopOrdersExecutor, storicoOrdini)); // Handle client connection in a new thread
+                connessioni.execute(new ServerThread(clientSocket, properties, usersMap, userIpPortMap, orderBook, gson, askStopOrdersExecutor, bidStopOrdersExecutor, storicoOrdini, workingThreads)); // Handle client connection in a new thread
             }
         } catch (IOException e) {
             System.err.println("Error accepting connections: " + e.getMessage());
