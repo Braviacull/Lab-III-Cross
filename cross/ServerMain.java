@@ -80,7 +80,7 @@ public class ServerMain {
 
         loadMapFromJson(Costants.USERS_MAP_FILE, usersMap); // Load user map from JSON
 
-        StoricoOrdini.loadStoricoOrdini(Costants.STORICO_ORDINI, storicoOrdini);
+        StoricoOrdini.loadStoricoOrdini(Costants.STORICO_ORDINI_TEMP, storicoOrdini);
         
         orderBook = new OrderBook(gson); // Initialize order book
 

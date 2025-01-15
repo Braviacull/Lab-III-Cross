@@ -14,5 +14,14 @@
       "price": 1,
       "username": "alessio"
     }
+  ],
+  "2": [
+    {
+      "orderId": 82924,
+      "type": "ask",
+      "size": 1,
+      "price": 2,
+      "username": "alessio"
+    }
   ]
 }

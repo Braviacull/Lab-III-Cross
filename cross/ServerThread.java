@@ -114,16 +114,8 @@ public class ServerThread implements Runnable {
                 out.writeUTF(gson.toJson(responseStatus));
                 break;
             default:
-                if (operation.equals(stopString)) {
-                    if (loggedIn){
-                        System.out.println(username + " disconnected");
-                    } else {
-                        System.out.println("Client disconnected");
-                    }
-                } else {
-                    throw new IllegalArgumentException("Invalid operation: " + operation);
-                }
-                break;
+            System.out.println("ServerThread " + Thread.currentThread().getId() + " Stopped");
+                if (operation.equals(stopString)) return;
         }
     }
 
@@ -250,6 +242,8 @@ public class ServerThread implements Runnable {
             }
 
             if (this.username.equals(username)) {
+                System.out.println(username + " logged Out");
+
                 loggedIn = false;
                 this.username = "";
                 responseStatus = new ResponseStatus(100, logout);

@@ -75,8 +75,8 @@ public class ClientMain {
             }
 
             line = scanner.nextLine();
-
-            synchronized (Sync.timeOutSync) {
+            
+            synchronized (this) {
                 if (!loggedIn.get()){
                     username = "";
                     switch (line) {

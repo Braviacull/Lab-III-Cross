@@ -30,7 +30,7 @@ public class AutomaticLogout implements Runnable {
                     timerReset = false;
                     lock.wait(timeout);
                     if (!timerReset && running) {
-                        synchronized (Sync.timeOutSync){
+                        synchronized (clientMain){
                             System.out.println("Automatic logout");
                             System.out.println("Possible actions: (exit, register, updateCredentials, login)");
                             performLogout();
