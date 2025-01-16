@@ -122,7 +122,6 @@ public class MyUtils {
 
         ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
         if (map.isEmpty() || size > orderBook.getSizeFromMap(map, limit, type)) {
-            System.out.println(size + "  " + orderBook.getSizeFromMap(map, limit, type)); // DA RIMUOVERE
             return size;
         }
 
@@ -164,16 +163,12 @@ public class MyUtils {
     }
 
     public static void printMap (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
-        System.out.println("printing map...");
         if (map.keySet().isEmpty()) {
             System.out.println("empty map");
         }
         for (int key : map.keySet()) {
             ConcurrentLinkedQueue<Order> queue = map.get(key);
             for (Order order : queue) {
-                if (queue.isEmpty()) {
-                    System.out.println("empty queue");
-                }
                 int orderId = order.getId();
                 System.out.println("orderId = " + orderId);
                 String type = order.getType();
@@ -183,8 +178,7 @@ public class MyUtils {
                 int price = order.getPrice();
                 System.out.println("price = " + price);
                 String username = order.getUsername();
-                System.out.println("username = " + username);
-                System.out.println("");
+                System.out.println("username = " + username + "\n");
             }
         }
     }

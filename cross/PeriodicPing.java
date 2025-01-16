@@ -27,7 +27,7 @@ public class PeriodicPing implements Runnable{
                         synchronized (clientMain){
                             if (!clientMain.isServerOnline()) {
                                 clientMain.getIsServerOnline().set(false);
-                                System.out.println("Server Offline, scrivi qualsiasi cosa per terminare");
+                                Sync.printlnSync("Server Offline, scrivi qualsiasi cosa per terminare");
                                 running = false;
                             }
                         }
@@ -37,6 +37,6 @@ public class PeriodicPing implements Runnable{
                 }
             }
         }
-        System.out.println("Periodic Ping terminato");
+        Sync.printlnSync("Periodic Ping terminato");
     }
 }

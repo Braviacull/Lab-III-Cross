@@ -21,9 +21,8 @@ public class PeriodicUpdate implements Runnable{
             synchronized(lock) {
                 try {
                     lock.wait(period);
-                    System.out.println("UPDATING");
                     update();
-                    System.out.println("UPDATE finished");
+                    System.out.println("JSONS UPDATED");
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }

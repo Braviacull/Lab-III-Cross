@@ -60,7 +60,7 @@ public class ClientMain {
             handleGetPriceHistory();
         }
         else if (!line.equals(properties.getStopString())) {
-            System.out.println("Unrecognized action");
+            Sync.printlnSync("Unrecognized action");
         } 
         else if (line.equals(properties.getStopString())) {
             try {
@@ -80,7 +80,6 @@ public class ClientMain {
             synchronized (this) {
                 out.writeUTF(Costants.PING);
                 String response = in.readUTF();
-                System.out.println(response.equals(Costants.ONLINE));
                 return response.equals(Costants.ONLINE);
             }
         } catch (IOException e) {
@@ -97,57 +96,59 @@ public class ClientMain {
         String line = "";
         while (!line.equals(properties.getStopString())) {
             if (!loggedIn.get()) {
-                System.out.println("Possible actions: (exit, register, updateCredentials, login, getPriceHistory)");
+                Sync.printlnSync(Costants.LOGGED_OUT_POSSIBLE_ACTIONS);
             } else {
-                System.out.println("Possible actions: (exit, logout, insertLimitOrder, insertMarketOrder, insertStopOrder, cancelOrder, getPriceHistory)");
+                Sync.printlnSync(Costants.LOGGED_IN_POSSIBLE_ACTIONS);
             }
 
             line = scanner.nextLine();
 
             if (!isServerOnline()) {
-                System.out.println("Server Offline, chiudo");
+                Sync.printlnSync("Server Offline");
                 close();
                 return;
             }
             
             synchronized (this) {
-                if (!loggedIn.get()){
-                    username = "";
-                    switch (line) {
-                        case Costants.REGISTER:
-                            handleRegister();
-                            break;
-                        case Costants.UPDATE_CREDENTIALS:
-                            handleUpdateCredentials();
-                            break;
-                        case Costants.LOGIN:
-                            handleLogin();
-                            break;
-                        default:
-                            defaultBehavior(line);
-                            break;
-                    }
-                } else {
-                    automaticLogout.resetTimer();
-                    switch (line) {
-                        case Costants.LOGOUT:
-                            handleLogout();
-                            break;
-                        case Costants.INSERT_LIMIT_ORDER:
-                            handleInsertLimitOrder();
-                            break;
-                        case Costants.INSERT_MARKET_ORDER:
-                            handleInsertMarketOrder();
-                            break;
-                        case Costants.INSERT_STOP_ORDER:
-                            handleInstertStopOrder();
-                            break;
-                        case Costants.CANCEL_ORDER:
-                            handleCancelOrder();
-                            break;
-                        default:
-                            defaultBehavior(line);
-                            break;
+                synchronized (Sync.console) {
+                    if (!loggedIn.get()){
+                        username = "";
+                        switch (line) {
+                            case Costants.REGISTER:
+                                handleRegister();
+                                break;
+                            case Costants.UPDATE_CREDENTIALS:
+                                handleUpdateCredentials();
+                                break;
+                            case Costants.LOGIN:
+                                handleLogin();
+                                break;
+                            default:
+                                defaultBehavior(line);
+                                break;
+                        }
+                    } else {
+                        automaticLogout.resetTimer();
+                        switch (line) {
+                            case Costants.LOGOUT:
+                                handleLogout();
+                                break;
+                            case Costants.INSERT_LIMIT_ORDER:
+                                handleInsertLimitOrder();
+                                break;
+                            case Costants.INSERT_MARKET_ORDER:
+                                handleInsertMarketOrder();
+                                break;
+                            case Costants.INSERT_STOP_ORDER:
+                                handleInstertStopOrder();
+                                break;
+                            case Costants.CANCEL_ORDER:
+                                handleCancelOrder();
+                                break;
+                            default:
+                                defaultBehavior(line);
+                                break;
+                        }
                     }
                 }
             }
@@ -331,10 +332,8 @@ public class ClientMain {
 
                         // start receiving notification
                         if (properties.getServerIP().equals(InetAddress.getLoopbackAddress().getHostAddress())){
-                            System.out.print("loopbackaddress\n");
                             receiveNotification = new ReceiveNotification(InetAddress.getLoopbackAddress(), properties.getNotificationPort());
                         } else {
-                            System.out.print("localHostaddress\n");
                             receiveNotification = new ReceiveNotification(InetAddress.getLocalHost(), properties.getNotificationPort());
                         }
                         // start receiving notifications
@@ -360,7 +359,7 @@ public class ClientMain {
                         if (history == null) {
                             System.err.println("Failed to receive price history.");
                         } else {
-                            System.out.println("Received price history: " + history);
+                            System.out.println("Received price history:\n" + history);
                         }
                         break;
                     default:
@@ -434,6 +433,18 @@ public class ClientMain {
         return res;
     }
 
+    private boolean isInt(String str) {
+        if (str == null || str.isEmpty()) {
+            return false;
+        }
+        try {
+            Integer.parseInt(str); // Try to parse the string as an integer
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        return true;
+    }
+    
     public String scanIntField(String field) {
         String res = "";
         while (true) {
@@ -445,18 +456,6 @@ public class ClientMain {
             }
         }
         return res;
-    }
-
-    private boolean isInt(String str) {
-        if (str == null || str.isEmpty()) {
-            return false;
-        }
-        try {
-            Integer.parseInt(str); // Try to parse the string as an integer
-        } catch (NumberFormatException e) {
-            return false;
-        }
-        return true;
     }
 
     public static void main(String[] args) {

@@ -122,7 +122,6 @@ public class ServerMain {
     }
 
     private void acceptConnections(){
-        System.out.println();
         try {
             System.out.println("Server started\nServerIP: " + InetAddress.getLocalHost().getHostAddress());
         } catch (UnknownHostException e) {

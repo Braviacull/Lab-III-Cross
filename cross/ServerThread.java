@@ -122,7 +122,7 @@ public class ServerThread implements Runnable {
                 handleGetPriceHistory();
                 break;
             default:
-            System.out.println("ServerThread  Stopped");
+            System.out.println("ServerThread terminato");
                 if (operation.equals(stopString)) return;
         }
     }
@@ -352,11 +352,11 @@ public class ServerThread implements Runnable {
             storicoOrdini.add(trade);
 
             if (size > 0) {
-                System.out.println("Market Order SCARTATO");
+                System.out.println("Market Order: " + marketOrder.getId() + " SCARTATO");
 
                 MyUtils.sendOrderId(-1, out);
             } else if (size == 0) {
-                System.out.println("Market Order ESEGUITO");
+                System.out.println("Market Order: " + marketOrder.getId() + " ESEGUITO");
 
                 properties.setNextId(Order.getNextId());
                 MyUtils.sendOrderId(marketOrder.getId(), out);
@@ -502,8 +502,6 @@ public class ServerThread implements Runnable {
                 PriceHistory priceHistory = new PriceHistory(max, min, apertura, chiusura);
                 json = gson.toJson(priceHistory);
                 MyUtils.sendJson(json, out);
-                
-                System.out.println(priceHistory);
             }
 
         } catch (IOException e) {

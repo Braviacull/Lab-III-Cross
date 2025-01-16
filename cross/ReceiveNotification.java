@@ -27,14 +27,14 @@ public class ReceiveNotification implements Runnable {
                 socket.receive(packet); // Receive UDP packet
 
                 String json = new String(packet.getData(), 0, packet.getLength(), "UTF-8"); // Convert byte array to string
-                System.out.println("Notification received: " + json);
+                Sync.printlnSync("Notification received: " + json);
             }
         } catch (IOException e) {
             if (running.get()) {
                 e.printStackTrace();
             }
         } finally {
-            System.out.println("ReceiveNotification thread stopped.");
+            Sync.printlnSync("ReceiveNotification terminato.");
         }
     }
 

@@ -18,6 +18,9 @@ public class Costants {
     public static final String CANCEL_ORDER = "cancelOrder";
     public static final String GET_PRICE_HISTORY = "getPriceHistory";
 
+    public static final String LOGGED_IN_POSSIBLE_ACTIONS = "Possible actions: (exit, logout, insertLimitOrder, insertMarketOrder, insertStopOrder, cancelOrder, getPriceHistory)";
+    public static final String LOGGED_OUT_POSSIBLE_ACTIONS = "Possible actions: (exit, register, updateCredentials, login, getPriceHistory)";
+
     public static final String CLOSED_TRADES = "closedTrades";
 
     public static final String LIMIT = "limit";

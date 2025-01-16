@@ -32,8 +32,7 @@ public class AutomaticLogout implements Runnable {
                     if (!timerReset && running) {
                         synchronized (clientMain){
                             if (clientMain.getIsServerOnline().get()) {
-                                System.out.println("Automatic logout");
-                                System.out.println("Possible actions: (exit, register, updateCredentials, login)");
+                                Sync.printlnSync("Automatic logout\n" + Costants.LOGGED_OUT_POSSIBLE_ACTIONS);
                                 performLogout();
                             } else {
                                 running = false;
@@ -45,7 +44,7 @@ public class AutomaticLogout implements Runnable {
                 }
             }
         }
-        System.out.println("timer terminato");
+        Sync.printlnSync("timer terminato");
     }
 
     private void performLogout(){

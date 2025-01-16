@@ -18,8 +18,6 @@ public class AskStopOrdersExecutor extends OrdersExecutor implements Runnable {
             bidMarketPrice = orderBook.getBidMarketPrice(orderBook.getBidMap());
             this.bidMarketPrice = bidMarketPrice;
         }
-        System.out.println("bidMarketPrice: " + bidMarketPrice + " < " + "askStopMarketPrice : " + orderBook.getAskMarketPrice(orderBook.getAskMapStop()));
-        System.out.println(bidMarketPrice < orderBook.getAskMarketPrice(orderBook.getAskMapStop()));
         return bidMarketPrice < orderBook.getAskMarketPrice(orderBook.getAskMapStop());
     }
 
@@ -32,11 +30,9 @@ public class AskStopOrdersExecutor extends OrdersExecutor implements Runnable {
             }
 
             if (!running.get()) {
-                System.out.println("AskStopOrdersExecutor stopped");
+                System.out.println("AskStopOrdersExecutor terminato");
                 return;
             }
-
-            System.out.println("Risvegliato");
 
             if (orderBook.getAskMapStop().isEmpty()) {
                 throw new IllegalStateException("map should not be empty after while condition, Wrong logic");
@@ -49,10 +45,6 @@ public class AskStopOrdersExecutor extends OrdersExecutor implements Runnable {
                 iterate (iterator);
                 map.remove(price);
             }
-            System.out.println("uscito dal while");
-
-            MyUtils.printMap(orderBook.getAskMapStop());
-            MyUtils.printMap(orderBook.getBidMap());
 
         }
     }
