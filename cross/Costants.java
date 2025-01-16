@@ -38,6 +38,7 @@ public class Costants {
     public static final String NOTIFICATION_PORT = "notification.port";
     public static final String TIMEOUT = "automaticLogout.timeout";
     public static final String PERIOD = "server.period";
+    public static final String AWAIT_SECONDS = "server.await";
 
 
     // supported orderbook maps

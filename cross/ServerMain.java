@@ -55,12 +55,12 @@ public class ServerMain {
         periodicUpdate.stop();
 
         try {
-            services.awaitTermination(30, TimeUnit.SECONDS);
+            services.awaitTermination(properties.getAwaitSeconds(), TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         try {
-            connessioni.awaitTermination(30, TimeUnit.SECONDS);
+            connessioni.awaitTermination(properties.getAwaitSeconds(), TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

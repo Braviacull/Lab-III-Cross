@@ -15,6 +15,7 @@ public class MyProperties {
     private int notificationPort;
     private int timeout;
     private int period;
+    private int await;
 
     public MyProperties(String fileName) {
         this.propertiesFilePath = fileName;
@@ -41,6 +42,11 @@ public class MyProperties {
             if (properties.getProperty(Costants.PERIOD) != null) {
                 period = Integer.parseInt(properties.getProperty(Costants.PERIOD));
             }
+
+            if (properties.getProperty(Costants.AWAIT_SECONDS) != null) {
+                await = Integer.parseInt(properties.getProperty(Costants.AWAIT_SECONDS));
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -82,5 +88,9 @@ public class MyProperties {
 
     public int getPeriod () {
         return period;
+    }
+
+    public int getAwaitSeconds () {
+        return await;
     }
 }

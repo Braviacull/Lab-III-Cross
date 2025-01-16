@@ -21,7 +21,7 @@ else
 endif
 
 # Regola per avviare il ServerMain
-server: compile
+server:
 	java -cp $(CLASSPATH) cross.ServerMain
 
 # Regola per avviare il ClientMain

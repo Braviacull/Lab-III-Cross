@@ -28,14 +28,4 @@ public class PriceHistory {
     public int getChiusura() {
         return chiusura;
     }
-
-    @Override
-    public String toString() {
-        return "PriceHistory{" +
-                "max=" + max +
-                ", min=" + min +
-                ", apertura=" + apertura +
-                ", chiusura=" + chiusura +
-                '}';
-    }
 }
