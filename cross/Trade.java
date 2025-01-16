@@ -17,14 +17,6 @@ public class Trade {
         this.timestamp = timestamp;
     }
 
-    public Trade(int orderId, String type, String orderType, int size, int timestamp) {
-        this.orderId = orderId;
-        this.type = type;
-        this.orderType = orderType;
-        this.size = size;
-        this.timestamp = timestamp;
-    }
-
     // Getters
     public int getOrderId() {
         return orderId;

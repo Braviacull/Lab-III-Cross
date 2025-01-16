@@ -16,6 +16,7 @@ public class Costants {
     public static final String INSERT_MARKET_ORDER = "insertMarketOrder";
     public static final String INSERT_STOP_ORDER = "insertStopOrder";
     public static final String CANCEL_ORDER = "cancelOrder";
+    public static final String GET_PRICE_HISTORY = "getPriceHistory";
 
     public static final String CLOSED_TRADES = "closedTrades";
 

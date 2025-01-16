@@ -12,6 +12,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.time.Instant;
+import java.lang.Math;
 
 public class ServerThread implements Runnable {
     private final Socket clientSocket;
@@ -116,6 +117,9 @@ public class ServerThread implements Runnable {
             case Costants.CANCEL_ORDER:
                 handleCancelOrder();
                 out.writeUTF(gson.toJson(responseStatus));
+                break;
+            case Costants.GET_PRICE_HISTORY:
+                handleGetPriceHistory();
                 break;
             default:
             System.out.println("ServerThread  Stopped");
@@ -325,6 +329,7 @@ public class ServerThread implements Runnable {
             }
 
             InsertMarketOrderRequest.Values values = insertMO.getValues();
+            int marketPrice = Costants.ASK.equals(values.getType()) ? orderBook.getBidMarketPrice(orderBook.getBidMap()) : orderBook.getAskMarketPrice(orderBook.getAskMap());
             
             int limit;
             switch (values.getType()) {
@@ -339,9 +344,9 @@ public class ServerThread implements Runnable {
             }
             
             int size = MyUtils.transaction(values.getSize(), limit, values.getType(), orderBook, userIpPortMap, gson);
-
+            
             Order marketOrder = new Order(values.getType(), values.getSize(), username);
-            Trade trade = new Trade(marketOrder.getId(), marketOrder.getType(), Costants.MARKET, marketOrder.getSize(), (int) Instant.now().getEpochSecond());
+            Trade trade = new Trade(marketOrder.getId(), marketOrder.getType(), Costants.MARKET, marketOrder.getSize(), marketPrice, (int) Instant.now().getEpochSecond());
             storicoOrdini.add(trade);
 
             if (size > 0) {
@@ -441,6 +446,64 @@ public class ServerThread implements Runnable {
 
         } catch (IOException e) {
             System.err.println("Error during CancelOrder: " + e.getMessage());
+        }
+    }
+
+    private void handleGetPriceHistory () {
+        try {
+            String json = in.readUTF();
+            GetPriceHistoryRequest getPriceHistoryRequest = gson.fromJson(json, GetPriceHistoryRequest.class);
+
+            if (!Costants.GET_PRICE_HISTORY.equals(getPriceHistoryRequest.getOperation())) {
+                throw new IllegalArgumentException("Invalid operation: " + getPriceHistoryRequest.getOperation());
+            }
+
+            GetPriceHistoryRequest.Values values = getPriceHistoryRequest.getValues();
+            int monthTarget = values.getMonth();
+
+            int max = 0;
+            int min = Integer.MAX_VALUE;
+            int apertura = 0;
+            int chiusura = 0;
+            boolean firstTradeFound = false;
+            
+            for (Trade trade : storicoOrdini) {
+                int epoch = trade.getTimestamp();
+                int month = DateGMT.convertEpochToGMT(epoch);
+                if (monthTarget == month) {
+                    int price = trade.getPrice();
+
+                    max = Math.max(max, price);
+                    min = Math.min(min, price);
+            
+                    if (!firstTradeFound) {
+                        apertura = price;
+                        firstTradeFound = true;
+                    }
+                    chiusura = price;
+                }
+            }
+
+            if (!firstTradeFound) {
+                // invia un responso negativo al client
+                responseStatus = new ResponseStatus(101, getPriceHistoryRequest);
+                out.writeUTF(gson.toJson(responseStatus));
+
+            } else {
+                // invia un responso positivo al client
+                responseStatus = new ResponseStatus(100, getPriceHistoryRequest);
+                out.writeUTF(gson.toJson(responseStatus));
+
+                // crea una struttura dati da inviare come json
+                PriceHistory priceHistory = new PriceHistory(max, min, apertura, chiusura);
+                json = gson.toJson(priceHistory);
+                MyUtils.sendJson(json, out);
+                
+                System.out.println(priceHistory);
+            }
+
+        } catch (IOException e) {
+            System.err.println("Error during getPriceHistory: " + e.getMessage());
         }
     }
 }

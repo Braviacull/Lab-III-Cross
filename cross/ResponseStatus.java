@@ -47,6 +47,13 @@ public class ResponseStatus {
         errorMessagesCancelOrder.put(101, "order does not exist or belongs to different user or has already been finalized");
     }
 
+    private static final Map<Integer, String> errorMessagesGetPriceHistory = new HashMap<>();
+
+    static {
+        errorMessagesGetPriceHistory.put(100, "OK");
+        errorMessagesGetPriceHistory.put(101, "month not found in history");
+    }
+
     public ResponseStatus(int responseCode, RegistrationRequest reg) {
         this.responseCode = responseCode;
         this.errorMessage = errorMessagesRegistration.getOrDefault(responseCode, "other error cases");
@@ -70,6 +77,11 @@ public class ResponseStatus {
     public ResponseStatus(int responseCode, CancelOrderRequest cancel) {
         this.responseCode = responseCode;
         this.errorMessage = errorMessagesCancelOrder.getOrDefault(responseCode, "other error cases");
+    }
+
+    public ResponseStatus(int responseCode, GetPriceHistoryRequest getPriceHistoryRequest) {
+        this.responseCode = responseCode;
+        this.errorMessage = errorMessagesGetPriceHistory.getOrDefault(responseCode, "other error cases");
     }
 
     public ResponseStatus(){

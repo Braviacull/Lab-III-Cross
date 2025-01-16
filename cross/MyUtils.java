@@ -1,5 +1,6 @@
 package cross;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -67,6 +68,24 @@ public class MyUtils {
         } catch (IOException e) {
             System.err.println("Error sending Order ID: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    public static void sendJson(String json, DataOutputStream out) {
+        try {
+            out.writeUTF(json);
+        } catch (IOException e) {
+            System.err.println("Error sending String: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static String receiveJson(DataInputStream in) {
+        try {
+            return in.readUTF();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null; // indica un errore
         }
     }
 

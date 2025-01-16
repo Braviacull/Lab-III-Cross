@@ -41,4 +41,9 @@ public class RequestFactory {
         CancelOrderRequest.Values values = new CancelOrderRequest.Values(orderId);
         return new CancelOrderRequest(Costants.CANCEL_ORDER, values);
     }
+
+    public static GetPriceHistoryRequest createGetPriceHistoryRequest(int month) {
+        GetPriceHistoryRequest.Values values = new GetPriceHistoryRequest.Values(month);
+        return new GetPriceHistoryRequest(Costants.GET_PRICE_HISTORY, values);
+    }
 }

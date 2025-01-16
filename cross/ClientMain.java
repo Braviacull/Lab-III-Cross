@@ -56,9 +56,13 @@ public class ClientMain {
     }
 
     private void defaultBehavior (String line) {
-        if (!line.equals(properties.getStopString())) {
+        if (line.equals(Costants.GET_PRICE_HISTORY)){
+            handleGetPriceHistory();
+        }
+        else if (!line.equals(properties.getStopString())) {
             System.out.println("Unrecognized action");
-        } else {
+        } 
+        else if (line.equals(properties.getStopString())) {
             try {
                 if (loggedIn.get()) {
                     handleLogout();
@@ -93,9 +97,9 @@ public class ClientMain {
         String line = "";
         while (!line.equals(properties.getStopString())) {
             if (!loggedIn.get()) {
-                System.out.println("Possible actions: (exit, register, updateCredentials, login)");
+                System.out.println("Possible actions: (exit, register, updateCredentials, login, getPriceHistory)");
             } else {
-                System.out.println("Possible actions: (exit, logout, insertLimitOrder, insertMarketOrder, insertStopOrder, cancelOrder)");
+                System.out.println("Possible actions: (exit, logout, insertLimitOrder, insertMarketOrder, insertStopOrder, cancelOrder, getPriceHistory)");
             }
 
             line = scanner.nextLine();
@@ -273,6 +277,19 @@ public class ClientMain {
         checkResponse(Costants.CANCEL_ORDER, username); // Check server response
     }
 
+    private void handleGetPriceHistory () {
+        String month = scanMonth("month");
+        getPriceHistory(Integer.parseInt(month));
+    }
+
+    private void getPriceHistory (int month) {
+        MyUtils.sendLine(Costants.GET_PRICE_HISTORY, out, isServerOnline);
+        GetPriceHistoryRequest getPriceHistoryRequest = RequestFactory.createGetPriceHistoryRequest(month);
+        String json = gson.toJson(getPriceHistoryRequest);
+        MyUtils.sendLine(json, out, isServerOnline); // Send JSON request to the server
+        checkResponse(Costants.GET_PRICE_HISTORY, username);
+    }
+
     private void receiveIdOrder() {
         try {
             int id = in.readInt(); // Read the order ID from the input stream
@@ -338,6 +355,14 @@ public class ClientMain {
                         receiveNotification.stop();// stop receiving notifications
                         receiveNotification = null;
                         break;
+                    case Costants.GET_PRICE_HISTORY:
+                        String history = MyUtils.receiveJson(in);
+                        if (history == null) {
+                            System.err.println("Failed to receive price history.");
+                        } else {
+                            System.out.println("Received price history: " + history);
+                        }
+                        break;
                     default:
                         break;
                 }
@@ -391,10 +416,28 @@ public class ClientMain {
         }
     }
 
-    public String scanIntField(String strInt) {
+    private boolean isMonth (String month) {
+        // Verifica se la stringa è formattata come MMYYYY
+        return month.matches("^(0[1-9]|1[0-2])\\d{4}$");
+    }
+
+    private String scanMonth(String field) {
         String res = "";
         while (true) {
-            res = scanField(strInt); // Scan the integer field
+            res = scanField(field); // Scan the integer field
+            if (isMonth(res)) {
+                break;
+            } else {
+                System.out.println("Month must be an integer in the form: MMYYYY, where MM is a number between 01 and 12.");
+            }
+        }
+        return res;
+    }
+
+    public String scanIntField(String field) {
+        String res = "";
+        while (true) {
+            res = scanField(field); // Scan the integer field
             if (isInt(res)) {
                 break;
             } else {

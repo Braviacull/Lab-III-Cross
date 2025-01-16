@@ -25,6 +25,8 @@ public class Request {
                 break;
             case Costants.CANCEL_ORDER:
                 break;
+            case Costants.GET_PRICE_HISTORY:
+                break;
             default:
                 throw new IllegalArgumentException(operation + " not supported");
         }
