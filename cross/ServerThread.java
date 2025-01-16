@@ -345,6 +345,8 @@ public class ServerThread implements Runnable {
             
             int size = MyUtils.transaction(values.getSize(), limit, values.getType(), orderBook, userIpPortMap, gson);
             
+            if (size > 0) marketPrice = -1; // registro un ordine con price -1 se l'ordine viene scartato e non lo considero in getPriceHistory
+
             Order marketOrder = new Order(values.getType(), values.getSize(), username);
             Trade trade = new Trade(marketOrder.getId(), marketOrder.getType(), Costants.MARKET, marketOrder.getSize(), marketPrice, (int) Instant.now().getEpochSecond());
             storicoOrdini.add(trade);
@@ -473,14 +475,16 @@ public class ServerThread implements Runnable {
                 if (monthTarget == month) {
                     int price = trade.getPrice();
 
-                    max = Math.max(max, price);
-                    min = Math.min(min, price);
-            
-                    if (!firstTradeFound) {
-                        apertura = price;
-                        firstTradeFound = true;
+                    if (price != -1) {
+                        max = Math.max(max, price);
+                        min = Math.min(min, price);
+                
+                        if (!firstTradeFound) {
+                            apertura = price;
+                            firstTradeFound = true;
+                        }
+                        chiusura = price;
                     }
-                    chiusura = price;
                 }
             }
 
