@@ -360,7 +360,7 @@ public class ServerThread implements Runnable {
 
                 properties.setNextId(Order.getNextId());
                 MyUtils.sendOrderId(marketOrder.getId(), out);
-                MyUtils.sendNotification(userIpPortMap.get(marketOrder.getUsername()), new Notification(trade), gson);
+                // MyUtils.sendNotification(userIpPortMap.get(marketOrder.getUsername()), new Notification(trade), gson);
             } else {
                 throw new IllegalArgumentException ("size must not be negative, SIZE: " + size);
             }

@@ -128,31 +128,35 @@ public class MyUtils {
         Integer price = Costants.ASK.equals(type) ? orderBook.getBidMarketPrice(orderBook.getBidMap()) : orderBook.getAskMarketPrice(orderBook.getAskMap()); // get market price
         while (size > 0 && price != null) {
             ConcurrentLinkedQueue<Order> queue = map.get(price);
-            Iterator<Order> iterator = queue.iterator();
-            while (iterator.hasNext() && size > 0) {
-                Order order = iterator.next();
-                if (size >= order.getSize()) {
-                    size -= order.getSize();
-                    iterator.remove();
-                    Trade trade = new Trade(order.getId(), order.getType(), Costants.LIMIT, order.getSize(), order.getPrice(), (int) Instant.now().getEpochSecond());
-                    sendNotification(userIpPortMap.get(order.getUsername()), new Notification(trade), gson);
-                } else {
-                    order.setSize(order.getSize() - size);
-                    size = 0;
+            if (queue != null) {
+                synchronized (queue) {
+                    Iterator<Order> iterator = queue.iterator();
+                    while (iterator.hasNext() && size > 0) {
+                        Order order = iterator.next();
+                        if (size >= order.getSize()) {
+                            size -= order.getSize();
+                            iterator.remove();
+                            Trade trade = new Trade(order.getId(), order.getType(), Costants.LIMIT, order.getSize(), order.getPrice(), (int) Instant.now().getEpochSecond());
+                            sendNotification(userIpPortMap.get(order.getUsername()), new Notification(trade), gson);
+                        } else {
+                            order.setSize(order.getSize() - size);
+                            size = 0;
+                        }
+        
+                        if (queue.isEmpty()) {
+                            map.remove(price);
+                        }
+        
+                        if (size == 0) {
+                            break;
+                        }
+                        else if (size < 0) {
+                            throw new IllegalArgumentException("Size cannot be negative: " + size);
+                        }
+                    }
                 }
-
-                if (queue.isEmpty()) {
-                    map.remove(price);
-                }
-
-                if (size == 0) {
-                    break;
-                }
-                else if (size < 0) {
-                    throw new IllegalArgumentException("Size cannot be negative: " + size);
-                }
+                price = Costants.ASK.equals(type) ? map.lowerKey(price) : map.higherKey(price);
             }
-            price = Costants.ASK.equals(type) ? map.lowerKey(price) : map.higherKey(price);
         }
 
         if (size != 0) {
@@ -162,26 +166,26 @@ public class MyUtils {
         return size;
     }
 
-    public static void printMap (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
-        if (map.keySet().isEmpty()) {
-            System.out.println("empty map");
-        }
-        for (int key : map.keySet()) {
-            ConcurrentLinkedQueue<Order> queue = map.get(key);
-            for (Order order : queue) {
-                int orderId = order.getId();
-                System.out.println("orderId = " + orderId);
-                String type = order.getType();
-                System.out.println("type = " + type);
-                int size = order.getSize();
-                System.out.println("size = " + size);
-                int price = order.getPrice();
-                System.out.println("price = " + price);
-                String username = order.getUsername();
-                System.out.println("username = " + username + "\n");
-            }
-        }
-    }
+    // public static void printMap (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
+    //     if (map.keySet().isEmpty()) {
+    //         System.out.println("empty map");
+    //     }
+    //     for (int key : map.keySet()) {
+    //         ConcurrentLinkedQueue<Order> queue = map.get(key);
+    //         for (Order order : queue) {
+    //             int orderId = order.getId();
+    //             System.out.println("orderId = " + orderId);
+    //             String type = order.getType();
+    //             System.out.println("type = " + type);
+    //             int size = order.getSize();
+    //             System.out.println("size = " + size);
+    //             int price = order.getPrice();
+    //             System.out.println("price = " + price);
+    //             String username = order.getUsername();
+    //             System.out.println("username = " + username + "\n");
+    //         }
+    //     }
+    // }
 
     public static class Bools {
         private boolean deleted;
@@ -206,26 +210,32 @@ public class MyUtils {
         }
     }
 
-    public static Bools searchAndDeleteOrderById (int idToDelete,ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map, String username) {
+    public static Bools searchAndDeleteOrderById(int idToDelete, ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map, String username) {
         Bools res = new Bools(false, false);
-        for (int price : map.keySet()) {
-            ConcurrentLinkedQueue<Order> queue = map.get(price);
-            for (Order order : queue) {
-                int id = order.getId();
-                if (id == idToDelete) {
-                    if (!order.getUsername().equals(username)){
-                        res.setFound(true); // trovato
-                        res.setDeleted(false); // ma username non corretto
-                        return res;
+        for (Map.Entry<Integer, ConcurrentLinkedQueue<Order>> entry : map.entrySet()) {
+            ConcurrentLinkedQueue<Order> queue = entry.getValue();
+            if (queue != null) {
+                synchronized (queue) {
+                    Iterator<Order> iterator = queue.iterator();
+                    while (iterator.hasNext()) {
+                        Order order = iterator.next();
+                        int id = order.getId();
+                        if (id == idToDelete) {
+                            if (!order.getUsername().equals(username)) {
+                                res.setFound(true); // trovato
+                                res.setDeleted(false); // ma username non corretto
+                                return res;
+                            }
+                            iterator.remove();
+                            if (queue.isEmpty()) {
+                                map.remove(entry.getKey());
+                            }
+                            res.setFound(true); // trovato
+                            res.setDeleted(true); // ed eliminato
+                            return res;
+                        }
                     }
-                    queue.remove(order);
-                    if (queue.isEmpty()){
-                        map.remove(price);
-                    }
-                    res.setFound(true); // trovato
-                    res.setDeleted(true); // ed eliminato
-                    return res;
-                } 
+                }
             }
         }
         return res; // non trovato e non eliminato
