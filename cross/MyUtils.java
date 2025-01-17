@@ -55,7 +55,7 @@ public class MyUtils {
             out.writeUTF(line);
         } catch (IOException e) {
             if (isServerOnline.get()){
-                System.err.println("Error receiving order ID: " + e.getMessage());
+                System.err.println("Error sending line: " + e.getMessage());
                 e.printStackTrace();
             } else {
             }
@@ -115,7 +115,65 @@ public class MyUtils {
         }
     }
 
-    public static synchronized int transaction(int size, int limit, String type, OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap, Gson gson) {
+    public static boolean limitCondition (Order limitOrder, Integer price) {
+        switch (limitOrder.getType()) {
+            case Costants.ASK:
+                return limitOrder.getPrice() <= price; // sto vendendo ad un prezzo maggiore o uguale di quello che chiedo 
+            case Costants.BID:
+                return limitOrder.getPrice() >= price; // sto comprando ad un prezzo minore o uguale di quello che chiedo
+            default:
+                throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+        }
+    }
+
+    public static int limitTransaction(Order limitOrder, OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap, Gson gson) {
+        String type = limitOrder.getType();
+        int limitOrderSize = limitOrder.getSize();
+        if (!Costants.ASK.equals(type) && !Costants.BID.equals(type)) {
+            throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+        }
+
+        ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map = Costants.ASK.equals(type) ? orderBook.getBidMap() : orderBook.getAskMap();
+        if (map.isEmpty()) return limitOrderSize;
+
+        synchronized (map) {
+            Integer price = Costants.ASK.equals(type) ? orderBook.getBidMarketPrice(orderBook.getBidMap()) : orderBook.getAskMarketPrice(orderBook.getAskMap()); // get market price
+            
+            while (limitOrderSize > 0) {
+                if (!limitCondition(limitOrder, price) || (price == null)) break;
+    
+                ConcurrentLinkedQueue<Order> queue = map.get(price);
+                Iterator<Order> iterator = queue.iterator();
+                while (iterator.hasNext() && limitOrderSize > 0) { // controllo la coda
+                    Order order = iterator.next();
+                    if (limitOrderSize >= order.getSize()) {
+                        limitOrderSize -= order.getSize();
+                        iterator.remove();
+                        Trade trade = new Trade(order.getId(), order.getType(), Costants.LIMIT, order.getSize(), order.getPrice(), (int) Instant.now().getEpochSecond());
+                        sendNotification(userIpPortMap.get(order.getUsername()), new Notification(trade), gson);
+                    } else {
+                        order.setSize(order.getSize() - limitOrderSize);
+                        limitOrderSize = 0;
+                    }
+    
+                    if (queue.isEmpty()) {
+                        map.remove(price);
+                    }
+    
+                    if (limitOrderSize == 0) {
+                        break;
+                    }
+                    else if (limitOrderSize < 0) {
+                        throw new IllegalArgumentException("Size cannot be negative: " + limitOrderSize);
+                    }
+                }
+                price = Costants.ASK.equals(type) ? map.lowerKey(price) : map.higherKey(price);
+            }
+        }
+        return limitOrderSize;
+    }
+
+    public static synchronized int transaction(int size, int limit, String type, String orderType, OrderBook orderBook, ConcurrentHashMap<String, IpPort> userIpPortMap, Gson gson) {
         if (!Costants.ASK.equals(type) && !Costants.BID.equals(type)) {
             throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
         }
@@ -124,7 +182,7 @@ public class MyUtils {
         if (map.isEmpty()) return size;
 
         synchronized (map) { // una volta che ho deciso se la transazione andrà a termine con il prossimo if, nessuno deve toccare la mappa
-            if (size > orderBook.getSizeFromMap(map, limit, type)) return size;
+            if (size > orderBook.getSizeFromMap(map)) return size; // non é possibile completare l'ordine
             Integer price = Costants.ASK.equals(type) ? orderBook.getBidMarketPrice(orderBook.getBidMap()) : orderBook.getAskMarketPrice(orderBook.getAskMap()); // get market price
             while (size > 0 && price != null) {
                 ConcurrentLinkedQueue<Order> queue = map.get(price);
@@ -156,10 +214,9 @@ public class MyUtils {
             }
         }
 
-        if (size != 0) {
+        if (size != 0 && !orderType.equals(Costants.LIMIT)) {
             throw new IllegalStateException("size must be 0 at this point"); // avevo calcolato che la size disponibile era sufficiente
         }
-        
         return size;
     }
 

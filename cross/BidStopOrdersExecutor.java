@@ -30,7 +30,6 @@ public class BidStopOrdersExecutor extends OrdersExecutor implements Runnable {
             }
 
             if (!running.get()) {
-                System.out.println("BidStopOrdersExecutor terminato");
                 return;
             }
 

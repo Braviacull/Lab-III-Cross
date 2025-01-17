@@ -37,6 +37,5 @@ public class PeriodicPing implements Runnable{
                 }
             }
         }
-        Sync.printlnSync("Periodic Ping terminato");
     }
 }

@@ -44,7 +44,6 @@ public class AutomaticLogout implements Runnable {
                 }
             }
         }
-        Sync.printlnSync("timer terminato");
     }
 
     private void performLogout(){

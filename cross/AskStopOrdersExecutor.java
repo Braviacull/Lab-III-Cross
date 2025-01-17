@@ -30,7 +30,6 @@ public class AskStopOrdersExecutor extends OrdersExecutor implements Runnable {
             }
 
             if (!running.get()) {
-                System.out.println("AskStopOrdersExecutor terminato");
                 return;
             }
 

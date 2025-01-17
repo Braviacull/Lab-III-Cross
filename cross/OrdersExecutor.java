@@ -52,7 +52,7 @@ public class OrdersExecutor {
                 default:
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
-            int size = MyUtils.transaction(stopOrder.getSize(), limit, stopOrder.getType(), orderBook, userIpPortMap, gson);
+            int size = MyUtils.transaction(stopOrder.getSize(), limit, stopOrder.getType(), Costants.STOP, orderBook, userIpPortMap, gson);
             if (size == 0) {
                 System.out.println("stop order " + stopOrder.getId() + " ESEGUITO");
                 Trade trade = new Trade(stopOrder.getId(), stopOrder.getType(), Costants.STOP, stopOrder.getSize(), stopOrder.getPrice(), (int) Instant.now().getEpochSecond());

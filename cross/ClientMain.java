@@ -1,6 +1,5 @@
 package cross;
 
-
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -104,7 +103,6 @@ public class ClientMain {
             line = scanner.nextLine();
 
             if (!isServerOnline()) {
-                Sync.printlnSync("Server Offline");
                 close();
                 return;
             }
@@ -368,7 +366,7 @@ public class ClientMain {
             }
         } catch (IOException e) {
             if (isServerOnline.get()){
-                System.err.println("Error receiving order ID: " + e.getMessage());
+                System.err.println("Error checking response: " + e.getMessage());
                 e.printStackTrace();
             } else {
             }

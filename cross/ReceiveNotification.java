@@ -33,8 +33,6 @@ public class ReceiveNotification implements Runnable {
             if (running.get()) {
                 e.printStackTrace();
             }
-        } finally {
-            Sync.printlnSync("ReceiveNotification terminato.");
         }
     }
 

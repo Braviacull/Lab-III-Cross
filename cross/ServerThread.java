@@ -122,7 +122,6 @@ public class ServerThread implements Runnable {
                 handleGetPriceHistory();
                 break;
             default:
-            System.out.println("ServerThread terminato");
                 if (operation.equals(stopString)) return;
         }
     }
@@ -286,26 +285,33 @@ public class ServerThread implements Runnable {
             Trade trade = new Trade(limitOrder.getId(), limitOrder.getType(), Costants.LIMIT, limitOrder.getSize(), limitOrder.getPrice(), (int) Instant.now().getEpochSecond());
             storicoOrdini.add(trade);
 
-            int size = 1;
+            int size = limitOrder.getSize();
             switch (values.getType()) {
                 case Costants.ASK:
+                // MyUtils.limitCondition(limitOrder, orderBook.getBidMarketPrice(orderBook.getBidMap()))
                     if (values.getPrice() <= orderBook.getBidMarketPrice(orderBook.getBidMap())) { // spread <= 0
-                        size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap, gson);
+                        size = MyUtils.limitTransaction(limitOrder, orderBook, userIpPortMap, gson);
                     }
-                    if (size != 0) { // transazione immediata non riuscita
+                    if (size != 0) { // transazione immediata COMPLETA non riuscita
                         // non c'é bisogno di sincronizzare perché l'aggiunta non é un problema (al massimo é più size disponibile) e la mappa é concorrente
+                        limitOrder.setSize(size);
                         orderBook.addOrder(limitOrder, orderBook.getAskMap());
                         bidStopOrdersExecutor.notifyOrdersExecutor();
+                    } else {
+                        MyUtils.sendNotification(userIpPortMap.get(limitOrder.getUsername()), new Notification(trade), gson);
                     }
                     break;
                 case Costants.BID:
                     if (values.getPrice() >= orderBook.getAskMarketPrice(orderBook.getAskMap())) { // spread <= 0
-                        size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap, gson);
+                        size = MyUtils.limitTransaction(limitOrder, orderBook, userIpPortMap, gson);
                     }
-                    if (size != 0) { // transazione immediata non riuscita
+                    if (size != 0) { // transazione immediata COMPLETA non riuscita
                         // non c'é bisogno di sincronizzare perché l'aggiunta non é un problema (al massimo é più size disponibile) e la mappa é concorrente
+                        limitOrder.setSize(size);
                         orderBook.addOrder(limitOrder, orderBook.getBidMap());
                         askStopOrdersExecutor.notifyOrdersExecutor();
+                    } else {
+                        MyUtils.sendNotification(userIpPortMap.get(limitOrder.getUsername()), new Notification(trade), gson);
                     }
                     break;
                 default:
@@ -347,7 +353,7 @@ public class ServerThread implements Runnable {
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
             
-            int size = MyUtils.transaction(values.getSize(), limit, values.getType(), orderBook, userIpPortMap, gson);
+            int size = MyUtils.transaction(values.getSize(), limit, values.getType(), Costants.MARKET, orderBook, userIpPortMap, gson);
             
             if (size > 0) marketPrice = -1; // registro un ordine con price -1 se l'ordine viene scartato e non lo considero in getPriceHistory
 

@@ -69,30 +69,12 @@ public class OrderBook {
         MyUtils.updateJson(fileName, map, gson);
     }
 
-    public int getSizeFromMap (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map, int limit, String type) {
+    public int getSizeFromMap (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
         int size = 0;
-        switch (type) {
-            case Costants.ASK:
-                for (int price : map.keySet()) {
-                    if (limit <= price){
-                        for (Order order : map.get(price)){
-                            size += order.getSize();
-                        }
-                    }
-                    else break; // limit (minimo prezzo di vendita) > price (prezzo a cui la gente é disposta a comprare)
-                }
-                break;
-            case Costants.BID:
-                for (int price : map.keySet()) {
-                    if (price <= limit){
-                        for (Order order : map.get(price)){
-                            size += order.getSize();
-                        }
-                    }
-                }
-                break;
-            default:
-                throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
+        for (int price : map.keySet()) {
+            for (Order order : map.get(price)){
+                size += order.getSize();
+            }
         }
         return size;
     }

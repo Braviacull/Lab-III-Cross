@@ -28,7 +28,6 @@ public class PeriodicUpdate implements Runnable{
                 }
             }
         }
-        System.out.println("periodicUpdate terminato");
     }
 
     public void update () {
@@ -42,7 +41,7 @@ public class PeriodicUpdate implements Runnable{
         ServerMain.updateJson(Costants.USERS_MAP_FILE, usersMap);
 
         ConcurrentLinkedQueue<Trade> storicoOrdini = serverMain.getStoricoOrdini();
-        StoricoOrdini.updateJson(Costants.STORICO_ORDINI_TEMP, storicoOrdini);
+        StoricoOrdini.updateJson(Costants.STORICO_ORDINI, storicoOrdini);
     }
 
     public void stop() {
