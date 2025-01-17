@@ -157,7 +157,8 @@ public class MyUtils {
             
             while (limitOrderSize > 0) {
                 // Decide se continuare
-                if (!limitCondition(limitOrder, price) || (price == null)) break;
+                if (price == null) break;
+                if (!limitCondition(limitOrder, price)) break;
     
                 // Ottiene la coda di ordini al prezzo che ha rispettato la limitCondition
                 ConcurrentLinkedQueue<Order> queue = map.get(price);
