@@ -215,6 +215,8 @@ public class ServerThread implements Runnable {
 
             if (!usersMap.containsKey(user.getUsername())) {
                 responseStatus = new ResponseStatus(101, login);
+            } else if (userIpPortMap.containsKey(user.getUsername())){
+                responseStatus = new ResponseStatus(102, login);
             } else {
                 User registeredUser = usersMap.get(user.getUsername());
                 if (gson.toJson(registeredUser).equals(gson.toJson(user))) {
@@ -360,7 +362,6 @@ public class ServerThread implements Runnable {
 
                 properties.setNextId(Order.getNextId());
                 MyUtils.sendOrderId(marketOrder.getId(), out);
-                // MyUtils.sendNotification(userIpPortMap.get(marketOrder.getUsername()), new Notification(trade), gson);
             } else {
                 throw new IllegalArgumentException ("size must not be negative, SIZE: " + size);
             }

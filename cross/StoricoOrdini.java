@@ -38,7 +38,7 @@ public class StoricoOrdini {
             gson.toJson(map, writer); // Save user map to JSON file
         } 
         catch (IOException e) {
-            System.err.println("Error updating queue to " + filename + ": " + e.getMessage());
+            System.err.println("Error updating map to " + filename + ": " + e.getMessage());
             e.printStackTrace();
         }
     }

@@ -41,9 +41,13 @@ public class AskStopOrdersExecutor extends OrdersExecutor implements Runnable {
             while (!calculateConditionToWait(this.bidMarketPrice)){
                 Integer price = orderBook.getAskMarketPrice(map);
                 ConcurrentLinkedQueue<Order> queue = map.get(price);
-                Iterator<Order> iterator = queue.iterator();
-                iterate (iterator);
-                map.remove(price);
+                if (queue != null) {
+                    synchronized (queue) {
+                        Iterator<Order> iterator = queue.iterator();
+                        iterate (iterator);
+                        map.remove(price);
+                    }
+                }
             }
 
         }
