@@ -293,6 +293,7 @@ public class ServerThread implements Runnable {
                         size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap, gson);
                     }
                     if (size != 0) { // transazione immediata non riuscita
+                        // non c'é bisogno di sincronizzare perché l'aggiunta non é un problema (al massimo é più size disponibile) e la mappa é concorrente
                         orderBook.addOrder(limitOrder, orderBook.getAskMap());
                         bidStopOrdersExecutor.notifyOrdersExecutor();
                     }
@@ -302,6 +303,7 @@ public class ServerThread implements Runnable {
                         size = MyUtils.transaction(values.getSize(), values.getPrice(), values.getType(), orderBook, userIpPortMap, gson);
                     }
                     if (size != 0) { // transazione immediata non riuscita
+                        // non c'é bisogno di sincronizzare perché l'aggiunta non é un problema (al massimo é più size disponibile) e la mappa é concorrente
                         orderBook.addOrder(limitOrder, orderBook.getBidMap());
                         askStopOrdersExecutor.notifyOrdersExecutor();
                     }
@@ -310,7 +312,7 @@ public class ServerThread implements Runnable {
                     throw new IllegalArgumentException("Type must be 'ask' or 'bid'");
             }
 
-            properties.setNextId(Order.getNextId()); // syncronised
+            properties.setNextId(Order.getNextId());
             MyUtils.sendOrderId(limitOrder.getId(), out);
         } catch (IOException e) {
             System.err.println("Error during insertLimitOrder: " + e.getMessage());

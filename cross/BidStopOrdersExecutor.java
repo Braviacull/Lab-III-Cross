@@ -39,17 +39,13 @@ public class BidStopOrdersExecutor extends OrdersExecutor implements Runnable {
             }
 
             while (!calculateConditionToWait(this.askMarketPrice)){
+                // non c'é bisogno di sincronizzare dato che sono l'unico thread che accede a questa mappa 
                 Integer price = orderBook.getBidMarketPrice(map);
                 ConcurrentLinkedQueue<Order> queue = map.get(price);
-                if (queue != null) {
-                    synchronized (queue) {
-                        Iterator<Order> iterator = queue.iterator();
-                        iterate (iterator);
-                        map.remove(price);
-                    }
-                }
+                Iterator<Order> iterator = queue.iterator();
+                iterate (iterator);
+                map.remove(price);
             }
-
         }
     }
 }

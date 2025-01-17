@@ -22,18 +22,19 @@ public class MyProperties {
         properties = new Properties();
         try (FileInputStream fis = new FileInputStream(fileName)) {
             properties.load(fis);
+            // campi in comune tra server.properties e client.properties
+            port = Integer.parseInt(properties.getProperty(Costants.SERVER_PORT));
+            stopString = properties.getProperty(Costants.SERVER_STOP_STRING);
+            notificationPort = Integer.parseInt(properties.getProperty(Costants.NOTIFICATION_PORT));
+            
+            // campi non in comune
             if (properties.getProperty(Costants.SERVER_IP) != null) {
                 serverIP = properties.getProperty(Costants.SERVER_IP);
             }
 
-            port = Integer.parseInt(properties.getProperty(Costants.SERVER_PORT));
-            stopString = properties.getProperty(Costants.SERVER_STOP_STRING);
-
             if (properties.getProperty(Costants.SERVER_NEXT_ID) != null) {
                 next_id = Integer.parseInt(properties.getProperty(Costants.SERVER_NEXT_ID));
             }
-
-            notificationPort = Integer.parseInt(properties.getProperty(Costants.NOTIFICATION_PORT));
 
             if (properties.getProperty(Costants.TIMEOUT) != null) {
                 timeout = Integer.parseInt(properties.getProperty(Costants.TIMEOUT));
