@@ -14,22 +14,20 @@ public class BidStopOrdersExecutor extends OrdersExecutor implements Runnable {
     }
 
     public boolean calculateConditionToWait(Integer askMarketPrice) {
-        if (askMarketPrice == null) {
+        if (askMarketPrice == null) { // voglio prendere il prezzo di mercato attuale
             askMarketPrice = orderBook.getAskMarketPrice(orderBook.getAskMap());
-            this.askMarketPrice = askMarketPrice;
+            this.askMarketPrice = askMarketPrice; 
         }
-        return askMarketPrice > orderBook.getBidMarketPrice(orderBook.getBidMapStop());
+        return askMarketPrice > orderBook.getBidMarketPrice(orderBook.getBidMapStop());// voglio prendere il prezzo di mercato di quando é scattato lo stop
     }
 
     public void run () {
         while (running.get()) {
-            synchronized (this) {
-                while (running.get() && calculateConditionToWait(null)) {
-                    myWait();
-                }
+            while (running.get() && calculateConditionToWait(null)) {
+                myWait();
             }
 
-            if (!running.get()) {
+            if (!running.get()) { // viene modificato nella funzione stop()
                 return;
             }
 

@@ -13,12 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+// classe contenente le funzioni per la gestione dello storico degli ordini
 public class StoricoOrdini {
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-
     public static void loadStoricoOrdini(String fileName, ConcurrentLinkedQueue<Trade> storicoOrdini) {
-        
         try (FileReader reader = new FileReader(fileName)) {
             Map<String, List<Trade>> tempMap = gson.fromJson(reader, new TypeToken<Map<String, List<Trade>>>() {}.getType());
             List<Trade> list = tempMap.get("trades");

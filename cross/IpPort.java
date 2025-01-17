@@ -2,6 +2,7 @@ package cross;
 
 import java.net.InetAddress;
 
+// La classe IpPort rappresenta una coppia di indirizzo IP e porta
 public class IpPort {
     private InetAddress ipAddress;
     private int port;

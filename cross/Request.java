@@ -1,5 +1,6 @@
 package cross;
 
+// Classe che tutte le richieste estendono
 public class Request {
     private String operation;
 

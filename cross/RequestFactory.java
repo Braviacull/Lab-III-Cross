@@ -1,5 +1,6 @@
 package cross;
 
+// Factory per costruire richieste
 public class RequestFactory {
 
     public static RegistrationRequest createRegistrationRequest(String username, String password) {

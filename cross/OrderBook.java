@@ -7,9 +7,10 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+// La classe OrderBook gestisce le mappe degli ordini bid e ask, inclusi gli ordini stop
 public class OrderBook {
     private Gson gson;
-    private Type mapType;
+    private Type mapType; // Tipo della mappa per la deserializzazione JSON
     private ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> bidMap = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
     private ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> askMap = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
     private ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> bidMapStop = new ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>();
@@ -18,16 +19,17 @@ public class OrderBook {
     public OrderBook(Gson gson) {
         this.gson = gson;
 
-        // create map type for updatejsons and loadmapfromjson
+        // Crea il tipo della mappa per la deserializzazione JSON
         mapType = new TypeToken<ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>>>(){}.getType();
 
-        // Load bid and ask maps from JSON files
+        // Carica le mappe bid e ask dai file JSON
         loadMapFromJson(Costants.BID_MAP_FILE, bidMap);
         loadMapFromJson(Costants.ASK_MAP_FILE, askMap);
         loadMapFromJson(Costants.BID_MAP_STOP_FILE, bidMapStop);
         loadMapFromJson(Costants.ASK_MAP_STOP_FILE, askMapStop);
     }
 
+    // Metodo per ottenere il nome del file JSON associato a una mappa
     public String getJsonFileNameFromMap (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
         if (map == askMap){
             return Costants.ASK_MAP_FILE;
@@ -41,9 +43,10 @@ public class OrderBook {
         else if (map == bidMapStop){
             return Costants.BID_MAP_STOP_FILE;
         }
-        throw new IllegalArgumentException ("map not supported");
+        throw new IllegalArgumentException (map + " not supported");
     }
 
+    // Metodo per ottenere il prezzo di mercato bid
     public int getBidMarketPrice (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
         if (!map.isEmpty()){
             return map.lastKey();
@@ -52,6 +55,7 @@ public class OrderBook {
         }
     }
 
+    // Metodo per ottenere il prezzo di mercato ask
     public int getAskMarketPrice (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
         if (!map.isEmpty()){
             return map.firstKey();
@@ -69,6 +73,7 @@ public class OrderBook {
         MyUtils.updateJson(fileName, map, gson);
     }
 
+    // Metodo per ottenere la dimensione totale degli ordini in una mappa, USATO PER CAPIRE SE UNA TRANSAZIONE PUÒ TERMINARE OPPURE NO
     public int getSizeFromMap (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
         int size = 0;
         for (int price : map.keySet()) {
@@ -79,6 +84,7 @@ public class OrderBook {
         return size;
     }
 
+    // Metodo per invertire il tipo di ordine (ask <-> bid)
     public String reverseType (String type) {
         switch (type) {
             case Costants.ASK:
@@ -93,11 +99,12 @@ public class OrderBook {
         return type;
     }
 
-    // Syncronised: la mappa é concorrente
-    public void addOrder(Order limitOrder, ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
-        map.computeIfAbsent(limitOrder.getPrice(), _ -> new ConcurrentLinkedQueue<Order>()).add(limitOrder); 
+    // aggiunge un ordine ad una mappa
+    public void addOrder(Order order, ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map) {
+        map.computeIfAbsent(order.getPrice(), _ -> new ConcurrentLinkedQueue<Order>()).add(order); 
     }
 
+    // Metodi getter per ottenere le mappe degli ordini
     public ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> getAskMap() {
             return askMap;
     }

@@ -15,22 +15,22 @@ import java.time.Instant;
 import java.lang.Math;
 
 public class ServerThread implements Runnable {
-    private final Socket clientSocket;
-    private AskStopOrdersExecutor askStopOrdersExecutor;
-    private BidStopOrdersExecutor bidStopOrdersExecutor;
-    private MyProperties properties;
-    private final String stopString;
-    private Gson gson;
-    private ConcurrentHashMap<String, User> usersMap;
-    private ConcurrentHashMap<String, IpPort> userIpPortMap;
-    private OrderBook orderBook;
-    private ConcurrentLinkedQueue<Trade> storicoOrdini;
-    private AtomicBoolean running;
-    private Boolean loggedIn;
-    private String username;
-    private DataInputStream in;
-    private DataOutputStream out;
-    private ResponseStatus responseStatus;
+    private final Socket clientSocket; // Socket del client
+    private AskStopOrdersExecutor askStopOrdersExecutor; // Esecutore per gli ordini stop ask
+    private BidStopOrdersExecutor bidStopOrdersExecutor; // Esecutore per gli ordini stop bid
+    private MyProperties properties; // Oggetto per gestire le proprietà del server
+    private final String stopString; // Stringa di stop del server
+    private Gson gson; // Oggetto Gson per la serializzazione/deserializzazione JSON
+    private ConcurrentHashMap<String, User> usersMap; // Mappa degli utenti
+    private ConcurrentHashMap<String, IpPort> userIpPortMap; // Mappa degli indirizzi IP e porte degli utenti
+    private OrderBook orderBook; // Oggetto OrderBook per gestire gli ordini
+    private ConcurrentLinkedQueue<Trade> storicoOrdini; // Coda concorrente per lo storico degli ordini
+    private AtomicBoolean running; // Flag per controllare se il server è in esecuzione
+    private Boolean loggedIn; // Flag per controllare se l'utente è loggato
+    private String username; // Nome utente
+    private DataInputStream in; // Stream di input per ricevere dati dal client
+    private DataOutputStream out; // Stream di output per inviare dati al client
+    private ResponseStatus responseStatus; // Oggetto per gestire lo stato della risposta
 
     public ServerThread(Socket socket, AskStopOrdersExecutor askStopOrdersExecutor, BidStopOrdersExecutor bidStopOrdersExecutor, ServerMain serverMain) {
         this.clientSocket = socket;
@@ -441,18 +441,24 @@ public class ServerThread implements Runnable {
             maps.add(orderBook.getAskMapStop());
             maps.add(orderBook.getBidMapStop());
 
+            // controlla in tutte le mappe
             for (ConcurrentSkipListMap<Integer, ConcurrentLinkedQueue<Order>> map : maps) {
                 if (!bools.isFound() && !bools.isDeleted()) { // non trovato e non eliminato
                     bools = MyUtils.searchAndDeleteOrderById(idToDelete, map, username);
                     if (bools.isFound() && bools.isDeleted()) { // trovato ed eliminato
-                        responseStatus = new ResponseStatus(100, cancelOrderRequest);
                         break;
                     }
                     if (bools.isFound() && !bools.isDeleted()){ // trovato ma username non corretto
-                        responseStatus = new ResponseStatus(101, cancelOrderRequest);
                         break;
                     }
                 }
+            }
+
+            // Prepara la risposta
+            if (bools.isDeleted()) {
+                responseStatus = new ResponseStatus(100, cancelOrderRequest);
+            } else {
+                responseStatus = new ResponseStatus(101, cancelOrderRequest);
             }
 
         } catch (IOException e) {
@@ -480,7 +486,7 @@ public class ServerThread implements Runnable {
             
             for (Trade trade : storicoOrdini) {
                 int epoch = trade.getTimestamp();
-                int month = DateGMT.convertEpochToGMT(epoch);
+                int month = DateGMT.EpochToGMT(epoch);
                 if (monthTarget == month) {
                     int price = trade.getPrice();
 

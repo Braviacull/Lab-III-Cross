@@ -11,20 +11,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+// La classe ClientMain gestisce la comunicazione client-server e le operazioni dell'utente
 public class ClientMain {
-    private MyProperties properties; // Properties object to read configuration
-    private Socket socket; // Socket for client-server communication
-    private DataOutputStream out; // Output stream to send data to the server
-    private DataInputStream in; // Input stream to receive data from the server
-    private Scanner scanner; // Scanner to read user input
-    private Gson gson; // Gson object for JSON serialization/deserialization
-    private String username; // Username of the logged-in user
-    private boolean firstTimeLogIn; // Flag to check if new user is registered
-    private AutomaticLogout automaticLogout;
-    private ReceiveNotification receiveNotification;
-    private PeriodicPing periodicPing;
-    private AtomicBoolean loggedIn = new AtomicBoolean(false);
-    private AtomicBoolean isServerOnline = new AtomicBoolean(true);
+    private MyProperties properties; // Oggetto Properties per leggere la configurazione
+    private Socket socket; // Socket per la comunicazione client-server
+    private DataOutputStream out; // Stream di output per inviare dati al server
+    private DataInputStream in; // Stream di input per ricevere dati dal server
+    private Scanner scanner; // Scanner per leggere l'input dell'utente
+    private Gson gson; // Oggetto Gson per la serializzazione/deserializzazione JSON
+    private String username; // Nome utente dell'utente loggato
+    private boolean firstTimeLogIn; // Flag per verificare se l'utente sta facendo il login per la prima volta
+    private AutomaticLogout automaticLogout; // Oggetto per il logout automatico
+    private ReceiveNotification receiveNotification; // Oggetto per ricevere notifiche
+    private PeriodicPing periodicPing; // Oggetto per inviare ping periodici al server
+    private AtomicBoolean loggedIn = new AtomicBoolean(false); // Flag per verificare se l'utente è loggato
+    private AtomicBoolean isServerOnline = new AtomicBoolean(true); // Flag per verificare se il server è online
 
     public ClientMain() {
         try {
@@ -34,16 +35,16 @@ public class ClientMain {
                 e.printStackTrace();
             }
             
-            properties = new MyProperties(Costants.CLIENT_PROPERTIES_FILE); // Load properties from file
-            socket = new Socket(properties.getServerIP(), properties.getPort()); // Connect to the server
-            out = new DataOutputStream(socket.getOutputStream()); // Initialize output stream
-            in = new DataInputStream(socket.getInputStream()); // Initialize input stream
-            scanner = new Scanner(System.in); // Initialize scanner for user input
-            gson = new GsonBuilder().setPrettyPrinting().create(); // Initialize Gson object
-            username = ""; // Initialize username as empty
+            properties = new MyProperties(Costants.CLIENT_PROPERTIES_FILE); // Carica le proprietà dal file
+            socket = new Socket(properties.getServerIP(), properties.getPort()); // stabilisce una connessione col server
+            out = new DataOutputStream(socket.getOutputStream()); // Inizializza lo stream di output
+            in = new DataInputStream(socket.getInputStream()); // Inizializza lo stream di input
+            scanner = new Scanner(System.in); // Inizializza lo scanner per l'input dell'utente
+            gson = new GsonBuilder().setPrettyPrinting().create(); // Inizializza l'oggetto Gson
+            username = ""; // Inizializza il nome utente come vuoto
             loggedIn.set(false);
 
-            sendRequests(); // Start sending requests to the server
+            sendRequests(); // Inizia a inviare richieste al server
         } catch (IOException e) {
             System.err.println("Error initializing client: " + e.getMessage());
             e.printStackTrace();
@@ -66,7 +67,7 @@ public class ClientMain {
                 if (loggedIn.get()) {
                     handleLogout();
                 }
-                out.writeUTF(line); // Send stop command to the server
+                out.writeUTF(line); // comunica al server che il client sta per terminare la sua esecuzione
             } catch (IOException e) {
                 System.err.println("Error sending stop command: " + e.getMessage());
                 e.printStackTrace();
@@ -74,6 +75,7 @@ public class ClientMain {
         }
     }
 
+    // Metodo per verificare se il server è online, inviando un messaggio periodicamente
     public boolean isServerOnline() {
         try {
             synchronized (this) {
@@ -87,8 +89,8 @@ public class ClientMain {
     }
 
     private void sendRequests() throws IOException {
-        // start timeout for automatic logout
-        periodicPing = new PeriodicPing(10000, this);
+        // Avvia il ping periodico per verificare lo stato del server
+        periodicPing = new PeriodicPing(properties.getPeriodicPingTimeout(), this);
         Thread periodicPingThread = new Thread(periodicPing);
         periodicPingThread.start();
 
@@ -107,8 +109,8 @@ public class ClientMain {
                 return;
             }
             
-            synchronized (this) {
-                synchronized (Sync.console) {
+            synchronized (this) { // ci sono diversi thread che inviano messaggi al server
+                synchronized (Sync.console) { // ci sono diversi thread che scrivono sulla console
                     if (!loggedIn.get()){
                         username = "";
                         switch (line) {
@@ -151,7 +153,7 @@ public class ClientMain {
                 }
             }
         }
-        close(); // Close resources when done
+        close(); // Chiude le risorse prima di uscire
     }
 
     private void handleRegister(){
@@ -161,11 +163,11 @@ public class ClientMain {
     }
 
     private void register (String username, String password) {
-        MyUtils.sendLine(Costants.REGISTER, out, isServerOnline);
-        RegistrationRequest reg = RequestFactory.createRegistrationRequest(username, password); // Create registration request
-        String jsonReg = gson.toJson(reg); // Convert request to JSON
-        MyUtils.sendLine(jsonReg, out, isServerOnline); // Send JSON request to the server
-        checkResponse(Costants.REGISTER, username); // Check server response
+        MyUtils.sendLine(Costants.REGISTER, out, isServerOnline); // invia la parola scansionata da linea di comando al server
+        RegistrationRequest reg = RequestFactory.createRegistrationRequest(username, password); // Crea richiesta di registrazione
+        String jsonReg = gson.toJson(reg); // Converte la richiesta in JSON per inviarla al server
+        MyUtils.sendLine(jsonReg, out, isServerOnline); // Invia la richiesta JSON al server
+        checkResponse(Costants.REGISTER, username); // Verifica la risposta del server
         if (firstTimeLogIn) {
             firstTimeLogIn = false;
             login(username, password);
@@ -179,12 +181,13 @@ public class ClientMain {
         updateCredentials(username, currentPassword, newPassword);
     }
 
+    // analoga a register
     private void updateCredentials(String username, String currentPassword, String newPassword) {
-        MyUtils.sendLine(Costants.UPDATE_CREDENTIALS, out, isServerOnline);
-        UpdateCredentialsRequest update = RequestFactory.createUpdateCredentialsRequest(username, currentPassword, newPassword); // Create update credentials request
-        String jsonUpdate = gson.toJson(update); // Convert request to JSON
-        MyUtils.sendLine(jsonUpdate, out, isServerOnline); // Send JSON request to the server
-        checkResponse(Costants.UPDATE_CREDENTIALS, username); // Check server response
+        MyUtils.sendLine(Costants.UPDATE_CREDENTIALS, out, isServerOnline); 
+        UpdateCredentialsRequest update = RequestFactory.createUpdateCredentialsRequest(username, currentPassword, newPassword);
+        String jsonUpdate = gson.toJson(update);
+        MyUtils.sendLine(jsonUpdate, out, isServerOnline);
+        checkResponse(Costants.UPDATE_CREDENTIALS, username);
     }
 
     private void handleLogin(){
@@ -193,12 +196,13 @@ public class ClientMain {
         login(username, password);
     }
 
+    // analoga a register
     private void login (String username, String password) {
         MyUtils.sendLine(Costants.LOGIN, out, isServerOnline);
-        LoginRequest login = RequestFactory.createLoginRequest(username, password); // Create login request
-        String jsonLogin = gson.toJson(login); // Convert request to JSON
-        MyUtils.sendLine(jsonLogin, out, isServerOnline); // Send JSON request to the server
-        checkResponse(Costants.LOGIN, username); // Check server response
+        LoginRequest login = RequestFactory.createLoginRequest(username, password);
+        String jsonLogin = gson.toJson(login);
+        MyUtils.sendLine(jsonLogin, out, isServerOnline);
+        checkResponse(Costants.LOGIN, username);
     }
 
     public void handleLogout(){
@@ -209,136 +213,142 @@ public class ClientMain {
         }
     }
 
+    // analoga a register
     private void logout (String username) {
         MyUtils.sendLine(Costants.LOGOUT, out, isServerOnline);
-        LogoutRequest logout = RequestFactory.createLogoutRequest(); // Create logout request
-        String jsonLogout = gson.toJson(logout); // Convert request to JSON
-        MyUtils.sendLine(jsonLogout, out, isServerOnline); // Send JSON request to the server
-        MyUtils.sendLine(username, out, isServerOnline); // Send username separately as logout.Values is an empty object
-        checkResponse(Costants.LOGOUT, username); // Check server response
+        LogoutRequest logout = RequestFactory.createLogoutRequest();
+        String jsonLogout = gson.toJson(logout);
+        MyUtils.sendLine(jsonLogout, out, isServerOnline);
+        MyUtils.sendLine(username, out, isServerOnline); // Invia il nome utente separatamente poiché logout.Values è un oggetto vuoto
+        checkResponse(Costants.LOGOUT, username);
     }
 
     private void handleInsertLimitOrder(){
-        String type = scanType(); // Scan the type of order (ask or bid)
-        String size = scanIntField("size"); // Scan the size of the order
-        String price = scanIntField("price"); // Scan the price of the order
+        String type = scanType(); // Scansiona il tipo di ordine (ask o bid)
+        String size = scanIntField("size"); // Scansiona la dimensione dell'ordine
+        String price = scanIntField("price"); // Scansiona il prezzo limite dell'ordine
         insertLimitOrder(type, Integer.parseInt(size), Integer.parseInt(price));
     }
 
     private void insertLimitOrder (String tipo, int dimensione, int prezzoLimite) {
-        MyUtils.sendLine(Costants.INSERT_LIMIT_ORDER, out, isServerOnline);
-        InsertLimitOrderRequest insertLimitOrderRequest = RequestFactory.createInsertLimitOrderRequest(tipo, dimensione, prezzoLimite); // Create limit order request
-        String json = gson.toJson(insertLimitOrderRequest); // Convert request to JSON
-        MyUtils.sendLine(json, out, isServerOnline); // Send JSON request to the server
-        receiveIdOrder(); // Receive the order ID from the server
+        MyUtils.sendLine(Costants.INSERT_LIMIT_ORDER, out, isServerOnline); // invia la parola scansionata da linea di comando al server
+        InsertLimitOrderRequest insertLimitOrderRequest = RequestFactory.createInsertLimitOrderRequest(tipo, dimensione, prezzoLimite); // Crea una richiesta per gestire il limit order
+        String json = gson.toJson(insertLimitOrderRequest); // Converte la richiesta in JSON per inviarla al server
+        MyUtils.sendLine(json, out, isServerOnline); // Invia la richiesta JSON al server
+        receiveIdOrder(); // Riceve l'ID dell'ordine dal server
     }
 
+    // analoga a handleInsertLimitOrder
     private void handleInsertMarketOrder(){
-        String type = scanType(); // Scan the type of order (ask or bid)
-        String size = scanIntField("size"); // Scan the size of the order
+        String type = scanType(); 
+        String size = scanIntField("size");
         insertMarketOrder(type, Integer.parseInt(size));
     }
 
+    // analoga a insertLimitOrder
     private void insertMarketOrder (String tipo, int dimensione) {
         MyUtils.sendLine(Costants.INSERT_MARKET_ORDER, out, isServerOnline);
-        InsertMarketOrderRequest insertMarketOrderRequest = RequestFactory.createInsertMarketOrderRequest(tipo, dimensione); // Create market order request
-        String json = gson.toJson(insertMarketOrderRequest); // Convert request to JSON
-        MyUtils.sendLine(json, out, isServerOnline); // Send JSON request to the server
-        receiveIdOrder(); // Receive the order ID from the server
+        InsertMarketOrderRequest insertMarketOrderRequest = RequestFactory.createInsertMarketOrderRequest(tipo, dimensione);
+        String json = gson.toJson(insertMarketOrderRequest);
+        MyUtils.sendLine(json, out, isServerOnline);
+        receiveIdOrder();
     }
 
+    // analoga a handleInsertLimitOrder
     private void handleInstertStopOrder(){
-        String type = scanType(); // Scan the type of order (ask or bid)
-        String size = scanIntField("size"); // Scan the size of the order
-        String price = scanIntField("price"); // Scan the price of the order
+        String type = scanType();
+        String size = scanIntField("size");
+        String price = scanIntField("price");
         insertStopOrder(type, Integer.parseInt(size), Integer.parseInt(price));
     }
 
+    // analoga a insertLimitOrder
     private void insertStopOrder (String tipo, int dimensione, int stopPrice) {
         MyUtils.sendLine(Costants.INSERT_STOP_ORDER, out, isServerOnline);
         InsertStopOrderRequest insertStopOrderRequest = RequestFactory.createInsertStopOrderRequest(tipo, dimensione, stopPrice);
-        String json = gson.toJson(insertStopOrderRequest); // Convert request to JSON
-        MyUtils.sendLine(json, out, isServerOnline); // Send JSON request to the server
-        receiveIdOrder(); // Receive the order ID from the server
+        String json = gson.toJson(insertStopOrderRequest);
+        MyUtils.sendLine(json, out, isServerOnline);
+        receiveIdOrder();
 
     }
 
     private void handleCancelOrder() {
-        String orderId = scanIntField("orderId");
+        String orderId = scanIntField("orderId"); // Scan orderId
         cancelOrder (Integer.parseInt(orderId));
     }
 
     private void cancelOrder (int orderId) {
-        MyUtils.sendLine(Costants.CANCEL_ORDER, out, isServerOnline);
-        CancelOrderRequest cancelOrderRequest = RequestFactory.createCancelOrderRequest(orderId);
-        String json = gson.toJson(cancelOrderRequest);
-        MyUtils.sendLine(json, out, isServerOnline); // Send JSON request to the server
-        checkResponse(Costants.CANCEL_ORDER, username); // Check server response
+        MyUtils.sendLine(Costants.CANCEL_ORDER, out, isServerOnline); // invia la parola scansionata da linea di comando al server
+        CancelOrderRequest cancelOrderRequest = RequestFactory.createCancelOrderRequest(orderId); // crea la richiesta
+        String json = gson.toJson(cancelOrderRequest); // Converte la richiesta in JSON per mandarla al server
+        MyUtils.sendLine(json, out, isServerOnline); // Invia la richiesta JSON al server
+        checkResponse(Costants.CANCEL_ORDER, username); // Verifica la risposta del server
     }
 
+    // analoga a handleCancelOrder
     private void handleGetPriceHistory () {
         String month = scanMonth("month");
         getPriceHistory(Integer.parseInt(month));
     }
 
+    // analoga a cancelOrder
     private void getPriceHistory (int month) {
         MyUtils.sendLine(Costants.GET_PRICE_HISTORY, out, isServerOnline);
         GetPriceHistoryRequest getPriceHistoryRequest = RequestFactory.createGetPriceHistoryRequest(month);
         String json = gson.toJson(getPriceHistoryRequest);
-        MyUtils.sendLine(json, out, isServerOnline); // Send JSON request to the server
+        MyUtils.sendLine(json, out, isServerOnline);
         checkResponse(Costants.GET_PRICE_HISTORY, username);
     }
 
     private void receiveIdOrder() {
         try {
-            int id = in.readInt(); // Read the order ID from the input stream
+            int id = in.readInt(); // Legge l'ID dell'ordine dallo stream di input
             if (id == -1) {
                 System.out.println("Order aborted, error code: " + id);
             } else {
                 System.out.println("Order " + id + " submitted");
             }
         } catch (IOException e) {
-            if (isServerOnline.get()){
+            if (isServerOnline.get()){ // é un errore solo se il server é online
                 System.err.println("Error receiving order ID: " + e.getMessage());
                 e.printStackTrace();
-            } else {
             }
         }
     }
 
     private void checkResponse(String operation, String username) {
         try {
-            String response = in.readUTF(); // Read the response from the server
-            ResponseStatus responseStatus = gson.fromJson(response, ResponseStatus.class); // Convert JSON response to ResponseStatus object
+            String response = in.readUTF(); // Legge la risposta dal server
+            ResponseStatus responseStatus = gson.fromJson(response, ResponseStatus.class); // Converte la risposta JSON in un oggetto ResponseStatus
 
-            int responseCode = responseStatus.getResponseCode(); // Get response code
-            String errorMessage = responseStatus.getErrorMessage(); // Get error message
+            int responseCode = responseStatus.getResponseCode(); // Ottiene il codice di risposta
+            String errorMessage = responseStatus.getErrorMessage(); // Ottiene il messaggio di errore
 
-            // Print response received from server
+            // Stampa la risposta ricevuta dal server
             if (!operation.equals(properties.getStopString())) {
                 System.out.println("Operation: " + operation + " Response " + responseCode + " - " + errorMessage);
             }
 
-            if (responseCode == 100) { // If response code is 100 (success)
+            if (responseCode == 100) { // CASO DI SUCCESSO
                 switch (operation) {
                     case Costants.REGISTER:
                         firstTimeLogIn = true;
                         break;
                     case Costants.LOGIN:
-                        this.username = username; // Set username
+                        this.username = username; // Imposta il nome utente
                         loggedIn.set(true);
 
-                        // start receiving notification
+                        // Inizializza l'oggetto per ricevere le notifiche in base a se client e server hanno IP diversi o meno
                         if (properties.getServerIP().equals(InetAddress.getLoopbackAddress().getHostAddress())){
                             receiveNotification = new ReceiveNotification(InetAddress.getLoopbackAddress(), properties.getNotificationPort());
                         } else {
                             receiveNotification = new ReceiveNotification(InetAddress.getLocalHost(), properties.getNotificationPort());
                         }
-                        // start receiving notifications
+                        // Avvia il thread per ricevere le notifiche
                         Thread receiveNotificationThread = new Thread(receiveNotification);
                         receiveNotificationThread.start();
                         
-                        // start timeout for automatic logout
+                        // Avvia il timeout per il logout automatico
                         automaticLogout = new AutomaticLogout(properties.getTimeout(), this);
                         Thread timeouThread = new Thread(automaticLogout);
                         timeouThread.start();
@@ -346,10 +356,10 @@ public class ClientMain {
                     case Costants.LOGOUT:
                         loggedIn.set(false);
 
-                        automaticLogout.stop();// stop timeout
+                        automaticLogout.stop(); // termina il thread per il logout automatico
                         automaticLogout = null;
 
-                        receiveNotification.stop();// stop receiving notifications
+                        receiveNotification.stop(); // termina il thread per la ricezione delle notifiche
                         receiveNotification = null;
                         break;
                     case Costants.GET_PRICE_HISTORY:
@@ -357,7 +367,7 @@ public class ClientMain {
                         if (history == null) {
                             System.err.println("Failed to receive price history.");
                         } else {
-                            System.out.println("Received price history:\n" + history);
+                            System.out.println("Received price history:\n" + history); // stampa il resoconto del mese richiesto
                         }
                         break;
                     default:
@@ -373,15 +383,16 @@ public class ClientMain {
         }
     }
 
-    public void close() {
+     // Metodo per chiudere le risorse
+     public void close() {
         try {
-            if (socket != null) socket.close(); // Close socket
-            if (out != null) out.close(); // Close output stream
-            if (in != null) in.close(); // Close input stream
-            if (scanner != null) scanner.close(); // Close scanner
-            if (automaticLogout != null) automaticLogout.stop();
-            if (receiveNotification != null) receiveNotification.stop();
-            if (periodicPing != null) periodicPing.stop();
+            if (socket != null) socket.close(); // Chiude il socket
+            if (out != null) out.close(); // Chiude lo stream di output
+            if (in != null) in.close(); // Chiude lo stream di input
+            if (scanner != null) scanner.close(); // Chiude lo scanner
+            if (automaticLogout != null) automaticLogout.stop(); // Ferma il logout automatico
+            if (receiveNotification != null) receiveNotification.stop(); // Ferma la ricezione delle notifiche
+            if (periodicPing != null) periodicPing.stop(); // Ferma il ping periodico
         } catch (IOException e) {
             System.err.println("Error closing resources: " + e.getMessage());
             e.printStackTrace();
@@ -391,8 +402,8 @@ public class ClientMain {
     private String scanField(String field) {
         String res = "";
         while (true) {
-            System.out.println("Enter " + field); // Prompt user to enter the field
-            res = scanner.nextLine(); // Read user input
+            System.out.println("Enter " + field); // Richiede all'utente di inserire il campo
+            res = scanner.nextLine(); // Legge l'input dell'utente
             if (res.equals("")) {
                 System.out.println(field + " cannot be empty");
             } else {
@@ -404,11 +415,11 @@ public class ClientMain {
 
     private String scanType() {
         while (true) {
-            String type = scanField("type"); // Scan the type of order
+            String type = scanField("type");
             if (type.equals(Costants.ASK) || type.equals(Costants.BID)) {
                 return type;
             } else {
-                System.out.println("type must be 'ask' or 'bid'"); // Type must be 'ask' or 'bid'
+                System.out.println("type must be 'ask' or 'bid'");
             }
         }
     }
@@ -421,7 +432,7 @@ public class ClientMain {
     private String scanMonth(String field) {
         String res = "";
         while (true) {
-            res = scanField(field); // Scan the integer field
+            res = scanField(field);
             if (isMonth(res)) {
                 break;
             } else {
@@ -436,7 +447,7 @@ public class ClientMain {
             return false;
         }
         try {
-            Integer.parseInt(str); // Try to parse the string as an integer
+            Integer.parseInt(str);
         } catch (NumberFormatException e) {
             return false;
         }
@@ -446,17 +457,17 @@ public class ClientMain {
     public String scanIntField(String field) {
         String res = "";
         while (true) {
-            res = scanField(field); // Scan the integer field
+            res = scanField(field);
             if (isInt(res)) {
                 break;
             } else {
-                System.out.println("size and price must be integers"); // Size and price must be integers
+                System.out.println("size and price must be integers");
             }
         }
         return res;
     }
 
     public static void main(String[] args) {
-        new ClientMain(); // Create a new instance of ClientMain
+        new ClientMain();
     }
 }

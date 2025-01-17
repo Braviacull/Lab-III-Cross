@@ -36,7 +36,7 @@ public class Order {
         this.username = username;
     }
 
-    public void setType(String type) {
+    public void setType(String type) { // controlla prima che il tipo sia valido, altrimento lancia un'eccezione
         switch (type) {
             case Costants.ASK:
                 break;

@@ -16,33 +16,36 @@ import com.google.gson.reflect.TypeToken;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+// La classe ServerMain gestisce il server e le sue operazioni principali
 public class ServerMain {
-    private MyProperties properties;
-    private static Type mapType;
-    private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private ServerSocket server;
-    private ExecutorService connessioni;
-    private ExecutorService services;
-    private ConcurrentHashMap<String, User> usersMap = new ConcurrentHashMap<String, User> ();
-    private ConcurrentHashMap<String, IpPort> userIpPortMap = new ConcurrentHashMap<>();
-    private OrderBook orderBook;
-    private ConcurrentLinkedQueue<Trade> storicoOrdini = new ConcurrentLinkedQueue<>();
-    private AtomicBoolean running = new AtomicBoolean(true);
-    private AskStopOrdersExecutor askStopOrdersExecutor;
-    private BidStopOrdersExecutor bidStopOrdersExecutor;
-    private PeriodicUpdate periodicUpdate;
+    private MyProperties properties; // Oggetto per gestire le proprietà del server
+    private static Type mapType; // Tipo della mappa per la deserializzazione JSON
+    private static Gson gson = new GsonBuilder().setPrettyPrinting().create(); // Oggetto Gson per la serializzazione/deserializzazione JSON
+    private ServerSocket server; // Socket del server
+    private ExecutorService connessioni; // Thread pool per gestire le connessioni
+    private ExecutorService services; // Thread pool per eseguire i servizi
+    private ConcurrentHashMap<String, User> usersMap = new ConcurrentHashMap<>(); // Mappa degli utenti
+    private ConcurrentHashMap<String, IpPort> userIpPortMap = new ConcurrentHashMap<>(); // Mappa degli indirizzi IP e porte degli utenti
+    private OrderBook orderBook; // Oggetto OrderBook per gestire gli ordini
+    private ConcurrentLinkedQueue<Trade> storicoOrdini = new ConcurrentLinkedQueue<>(); // Coda concorrente per lo storico degli ordini
+    private AtomicBoolean running = new AtomicBoolean(true); // Flag per controllare se il server è in esecuzione
+    private AskStopOrdersExecutor askStopOrdersExecutor; // Esecutore per gli ordini stop ask
+    private BidStopOrdersExecutor bidStopOrdersExecutor; // Esecutore per gli ordini stop bid
+    private PeriodicUpdate periodicUpdate; // Oggetto per l'aggiornamento periodico dei file JSON
 
+    // Costruttore che inizializza il server
     public ServerMain() {
         try {
-            Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
-            initializeServer(); // Initialize server configurations and resources
-            acceptConnections(); // Start accepting client connections
+            Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown)); // Aggiunge un hook per gestire lo shutdown del server
+            initializeServer(); // Inizializza le configurazioni e le risorse del server
+            acceptConnections(); // Inizia ad accettare le connessioni dei client
         } catch (IOException e) {
             System.err.println("Error initializing server: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
+    // Metodo per gestire lo shutdown del server
     public void shutdown() {
         System.out.println("Server will shut down soon...");
         running.set(false);
@@ -69,6 +72,7 @@ public class ServerMain {
         
     }
 
+    // Metodi getter per ottenere le proprietà e le mappe
     public MyProperties getProperties() {
         return properties;
     }
@@ -97,28 +101,31 @@ public class ServerMain {
         return running;
     }
 
+    // Metodo per caricare una mappa da un file JSON
     public static void loadMapFromJson (String fileName, ConcurrentHashMap<String, User> map) {
         MyUtils.loadMapFromJson(fileName, map, mapType, gson);
     }
 
+    // Metodo per aggiornare un file JSON con i dati di una mappa
     public static void updateJson (String fileName, ConcurrentHashMap<String, User> map) {
         MyUtils.updateJson(fileName, map, gson);
     }
 
+    // Metodo per inizializzare il server
     private void initializeServer() throws IOException {
-        properties = new MyProperties(Costants.SERVER_PROPERTIES_FILE); // Load server properties
+        properties = new MyProperties(Costants.SERVER_PROPERTIES_FILE); // Carica le proprietà del server
         mapType = new TypeToken<ConcurrentHashMap<String, User>>(){}.getType();
 
-        loadMapFromJson(Costants.USERS_MAP_FILE, usersMap); // Load user map from JSON
+        loadMapFromJson(Costants.USERS_MAP_FILE, usersMap); // Carica la mappa degli utenti dal file JSON
 
-        StoricoOrdini.loadStoricoOrdini(Costants.STORICO_ORDINI, storicoOrdini);
+        StoricoOrdini.loadStoricoOrdini(Costants.STORICO_ORDINI, storicoOrdini); // Carica lo storico degli ordini
         
-        orderBook = new OrderBook(gson); // Initialize order book
+        orderBook = new OrderBook(gson); // Inizializza l'order book
 
-        int nextID = properties.getNextId(); // Get next order ID from properties
-        Order.setNextID(nextID); // Set next order ID
+        int nextID = properties.getNextId(); // Ottiene il prossimo ID dell'ordine dalle proprietà
+        Order.setNextID(nextID); // Imposta il prossimo ID dell'ordine
 
-        server = new ServerSocket(properties.getPort()); // Initialize server socket
+        server = new ServerSocket(properties.getPort()); // Inizializza il socket del server
     }
 
     private void acceptConnections(){
@@ -127,7 +134,7 @@ public class ServerMain {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-        connessioni = Executors.newCachedThreadPool(); // Initialize thread pool for handling connections
+        connessioni = Executors.newCachedThreadPool();
         services = Executors.newFixedThreadPool(3);
 
         askStopOrdersExecutor = new AskStopOrdersExecutor(this);
@@ -140,9 +147,9 @@ public class ServerMain {
         services.execute(periodicUpdate);
         try {
             while (true) {
-                Socket clientSocket = server.accept(); // Accept client connection
+                Socket clientSocket = server.accept(); // Accetta la connessione del client
                 System.out.println("Server listening\nClientIP: " + clientSocket.getInetAddress().getHostAddress());
-                connessioni.execute(new ServerThread(clientSocket, askStopOrdersExecutor, bidStopOrdersExecutor, this)); // Handle client connection in a new thread
+                connessioni.execute(new ServerThread(clientSocket, askStopOrdersExecutor, bidStopOrdersExecutor, this)); // gestisci la connessione in un thread separato
             }
         } catch (IOException e) {
             if (!running.get()){
@@ -153,6 +160,6 @@ public class ServerMain {
     }
 
     public static void main(String[] args) {
-        new ServerMain(); // Start the server
+        new ServerMain();
     }
 }

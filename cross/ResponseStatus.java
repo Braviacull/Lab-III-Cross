@@ -3,6 +3,7 @@ package cross;
 import java.util.HashMap;
 import java.util.Map;
 
+// classe che gestisce i responsestatus per richieste di tipo differente
 public class ResponseStatus {
     private int responseCode;
     private String errorMessage;
